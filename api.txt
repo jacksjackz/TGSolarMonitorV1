@@ -1,0 +1,3 @@
+https://tgapps.synology.me:40556/getTGSolar/id_target_today
+https://tgapps.synology.me:40556/getTGSolar/id_target_yesterday
+https://tgapps.synology.me:40556/getTGSolar/id_target_last_month

@@ -1,0 +1,34 @@
+==================== create network (make this network same all other network that share the connection to db)
+docker network create mynetwork
+
+
+==================== deploy to docker
+
+## copy all the files except "node_modules"
+ssh tgapps_admin@tgapps.synology.me
+cd volume1/TGAPPS/Server/tgsolarmonitor
+sudo docker build --no-cache -t tgsolarmonitor .
+sudo docker create --name tgsolarmonitor --network=tgappsnetwork --restart=always -p 40555:40555 tgsolarmonitor
+
+### low memory
+sudo docker create --name tgsolarmonitor --network=tgappsnetwork --restart=always -p 40555:40555 --memory=1024m tgsolarmonitor
+
+sudo docker start tgsolarmonitor
+
+// to copy a file using "scp"
+scp index.html tgapps_admin@tgapps.synology.me:/volume1/TGAPPS/Server/tgsolarmonitor/
+
+// app.js
+scp app.js tgapps_admin@tgapps.synology.me:/volume1/TGAPPS/Server/tgsolarmonitor/
+
+
+// update (one liner)
+sudo docker build -t tgsolarmonitor . && sudo docker stop tgsolarmonitor && sudo docker rm -f tgsolarmonitor && sudo docker create --name tgsolarmonitor --network=tgappsnetwork --restart=always -p 40555:40555 tgsolarmonitor && sudo docker start tgsolarmonitor
+
+
+// remove
+sudo docker rm -f tgsolarmonitor
+
+
+#### test
+sudo docker create --name test123 --network=tgappsnetwork --restart=always -p 40555:40555 --memory=512m tgsolarmonitor

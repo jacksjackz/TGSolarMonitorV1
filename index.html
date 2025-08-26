@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    
+    <link rel="stylesheet" type="text/css" href="css/modal_dialog.css">
+    <link rel="stylesheet" type="text/css" href="css/simple_dialog.css">
+    
+    
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+        integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <link rel="icon" href="res/favicon.png" type="image/png">
+
+    <script src="js/SimpleDialog.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght,ROND@100..900,0..100&display=swap" rel="stylesheet">
+
+    <title>TG Solar Monitoring</title>
+
+    <style>
+
+        .accountInfo
+        {
+            color: rgb(114, 175, 255);
+            font-size: 20px;
+        }
+
+        #topLeft
+        {
+            color: white;
+            position: absolute;
+            left: 45px;
+            top: 45px;
+            user-select: none; /* Disables text selection */
+            cursor: default;   /* Disables pointer cursor */
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;   
+            background-color: black;    
+
+           
+        }
+
+        .animated-border {
+        position: relative;
+        padding: 20px;
+        /* border-radius: 8px; (optional) */
+        z-index: 1;
+        }
+        .animated-border::before {
+        content: "";
+        position: absolute;
+        inset: 0; /* shorthand for top/right/bottom/left: 0 */
+        padding: 3px; /* border thickness */
+        background: linear-gradient(90deg, #FFD600, #00FF00, #FF1744, #FFD600);
+        background-size: 300% 100%;
+        border-radius: inherit; /* if you want rounded corners */
+        z-index: -1;
+        -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: bordermove 2s linear infinite;
+        }
+        @keyframes bordermove {
+        0%   { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+        }
+
+        .backgroundLogo {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center horizontally and vertically */
+            width: 75%;
+            height: 75%;
+            background-image: url('res/logo.png');
+            background-size: contain; /* Or cover, depending on your preference */
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.2; /* Low opacity */
+            z-index: -1; /* Behind other content */
+            pointer-events: none; /* So it doesn't block clicks */
+        }
+
+        .installTypeClass
+        {
+            color: #eeff00;
+            justify-content: flex-end;
+            display: flex;
+            font-size: 3vw;
+            font-family: sans-serif;
+            text-shadow: 0px 0px 9px #00d0ff;
+            letter-spacing: 3px;
+            padding: 3px;
+            
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            color: rgb(77 255 0);
+            font-family: sans-serif;
+            justify-self: center;
+            font-size: 2rem;
+            
+        }
+
+        .dot {
+        height: 25px;
+        width: 25px;
+        margin-right: 20px;
+        background-color: red;
+        border-radius: 50%;
+        animation: blink 1s infinite;
+        display: none;
+        }
+
+        @keyframes rotateClockwise {
+            from {
+            transform: rotate(0deg);
+            }
+            to {
+            transform: rotate(360deg);
+            }
+        }
+
+        .tinyLabelDiv
+        {
+            font-size: 0.8vw;
+            color: white;
+        }
+
+        .divAccountContainerTop
+        {
+            letter-spacing: 30px;
+             font-family: "Doto", sans-serif;
+            font-size: 5.5vw;
+            color: white;
+            text-align: center;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+
+            display: flex;
+            align-items: center; 
+            justify-content: space-between; 
+
+            position: relative;
+            border: #00f2ff 5px solid;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-sizing: border-box;
+            outline-offset: -4px;
+            row-gap: 5px;
+
+            padding-left: 50px;
+            padding-right: 50px;
+
+          
+            /* padding-bottom: 75px; */
+        }
+
+        .divAccountContainer
+        {
+             position: relative;
+            border: #00f2ff 5px solid;
+            margin-bottom: 20px;
+            border-radius: 10px;
+             box-sizing: border-box;
+             outline-offset: -4px;
+             display: grid;
+             row-gap: 5px;
+      
+        }
+
+        
+/* The magic flowing border */
+.divAccountContainer::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    top: -5px; left: -5px; right: -5px; bottom: -5px;
+    border-radius: 12px;
+    padding: 0;
+    border: 5px solid transparent;
+  background:
+        linear-gradient(120deg, var(--border-gradient, #00f2ff, #ff00cc, #00f2ff)) 0 0/300% 300%;
+    background-clip: border-box;
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0) border-box;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: flowing-border 9s linear infinite;
+}
+
+        
+/* The magic flowing border */
+.divAccountContainerTop::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    top: -5px; left: -5px; right: -5px; bottom: -5px;
+    border-radius: 12px;
+    padding: 0;
+    border: 5px solid transparent;
+  background:
+        linear-gradient(120deg, var(--border-gradient, #00f2ff, #ff00cc, #00f2ff)) 0 0/300% 300%;
+    background-clip: border-box;
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0) border-box;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: flowing-border 9s linear infinite;
+}
+
+
+@keyframes flowing-border {
+  0%   { background-position: 0 0; }
+  100% { background-position: 300% 0; }
+}
+
+.labelTotal
+{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+             Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    font-size: 4.0vw;
+    color: rgb(234, 255, 0);
+    font-weight: 400;
+    /* font-weight: 1000; */
+    letter-spacing: 10px;
+    text-shadow: 10px 10px 10px rgb(69, 69, 1);
+
+}
+
+        .dot2
+        {
+            cursor: pointer;
+            background-image: url('../res/sunicon.png');
+            height: auto;
+            width: 100px;
+            margin-right: 20px;
+            border-radius: 50%;
+            /* animation: blink 1s infinite; */
+            animation: rotateClockwise 5s linear infinite; /* 2s duration, smooth, repeat forever */
+
+            background-size: contain;        /* Keep image aspect ratio */
+            background-repeat: no-repeat;
+            background-position: center;
+            aspect-ratio: 1 / 1;     
+
+            user-select: none; /* Disables text selection */
+            cursor: default;   /* Disables pointer cursor */
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% {
+            opacity: 1;
+            }
+            25%, 75% {
+            opacity: 0;
+            }
+        }
+
+
+        h3
+        {
+            color: white;
+        }
+
+        .energy-block-number {
+            font-weight: bold;
+            color: #00f7ff; /* You can style this however you want */
+            font-size: 1.2em;
+        }
+
+        body
+        {
+              user-select: none; /* Disables text selection */
+            cursor: default;   /* Disables pointer cursor */
+        }
+
+        .energy-block-a
+        {
+            user-select: none; /* Disables text selection */
+            cursor: default;   /* Disables pointer cursor */
+            
+        }
+
+        .mainValueClass
+        {
+            font-size: 4.5vw;
+            color: #ffffff;
+            display: block;
+            margin-top: 10px;
+            letter-spacing: 20px;
+          
+
+            font-family: "Doto", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+            text-shadow: 10px 10px 10px rgb(69, 69, 1);
+        }
+
+       
+        .mainValueClass2
+        {
+            
+            color: #ffffff;
+            display: block;
+            margin-top: 10px;
+            letter-spacing: 20px;
+          
+
+            font-family: "Doto", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+
+            font-size: 3.0vw;
+            color: #ab7865; 
+            padding-left: 25px;
+             text-shadow: 10px 10px 10px rgb(69, 69, 1);
+        }
+
+        #divTotal_Yesterday
+        {
+             font-size: 3.0vw;
+        }
+
+
+        .section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            /* margin-bottom: 10px; */
+            align-items: stretch;
+        }
+
+        .energy-block,
+        .net-revenue {
+         
+            padding: 20px;
+            border-radius: 10px;
+            align-content: center;
+        }
+
+        .energy-block {
+            /* background: #f2f2f2; */
+            border: #cbcbcb 3px solid;
+            color: white
+        }
+
+        .energy-block-a
+        {
+          
+            align-content: center;
+            border: #e0ffe0 1px dashed;
+            border-radius: 10px;
+            padding: 10px;
+
+
+            height: fit-content;
+            align-self: center;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+
+        }
+
+        .chartBlock
+        {
+            align-content: center;
+        }
+
+        .energy-block-today
+        {
+            border: #e0ffe0 3px solid;
+            color: white
+        }
+
+        .net-revenue {
+            /* background: #e0ffe0; */
+            border: #cbcbcb 3px solid;
+            text-align: center;
+        }
+
+        .net-revenue-today {
+            /* background: #e0ffe0; */
+            border: #e0ffe0 3px solid;
+            text-align: center;
+        }
+
+        .section-title {
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+
+        }
+
+        .lastMonthDetailChart
+        {
+            padding-left: 10px;
+        }
+
+        .thisMonthDetailChart
+        {
+            padding-left: 10px;
+        }
+
+        .block-text-energy {
+           text-align: center;
+        }
+
+    </style>
+
+
+
+    <script>
+        
+
+        const testLocalServer = false; // public = false
+        const onlineServer = false; // public = true
+
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  
+        let url = "https://tgapps.synology.me:40556"; 
+
+        if(onlineServer == true)
+        {
+            url = ""; // Local server URL
+        }
+
+        if(testLocalServer == true)
+        {
+            url = "http://127.0.0.1:40555"; // 
+        }
+
+        async function getSolarData(apiName, chartType, myusername) 
+        {
+
+            return new Promise(async (resolve, reject) => 
+            {
+
+                let solarData = await getTGSolarDataSingle(apiName, chartType, myusername);
+                resolve(solarData);
+
+                // let accountSelected = getSavedAccounts(); 
+                // accountSelected = JSON.parse(accountSelected);
+
+                // available_accounts.forEach(async user => 
+                // {
+                //     if(isBlank(accountSelected) == false)
+                //     {
+                //         for(let i = 0; i < accountSelected.length; i++)
+                //         {
+                //             let usernameSelected = accountSelected[i].username;
+
+                //             let solarData = await getTGSolarDataSingle(apiName, chartType, usernameSelected);
+                            
+                //             log("=====" + usernameSelected + "=====")
+                //             log(solarData);
+
+                //             resolve(solarData);
+                //         }
+                //     }
+                // });
+                
+                
+
+            });
+
+
+        }
+
+        async function getTGSolarDataSingle(apiName, chartType, usernameSelected)
+        {
+            return new Promise(async (resolve, reject) =>
+            {
+                let urlMain = url + '/getTGSolar/' + apiName + "/" + usernameSelected
+                const response = await fetch(url + '/getTGSolar/' + apiName + "/" + usernameSelected);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                console.log("apiName: " + urlMain);
+
+                if(chartType == false)
+                {
+                    const fallbackData = [
+                    { type: "Energy analysis", value: "-", unit: "MWh", data_type: "energy_analysis_map" },
+                    { type: "Production", value: "-", unit: "MWh", data_type: "production_map" },
+                    { type: "Consumption", value: "-", unit: "MWh", data_type: "consumption_map" },
+                    { type: "Net revenue", value: "-", unit: "MYR", data_type: "earning_map" },
+                    ];
+
+                    const contentLength = response.headers.get('content-length');
+                    const data = contentLength && parseInt(contentLength) > 0
+                    ? await response.json()
+                    : fallbackData;
+                    resolve(data);
+                }
+                else
+                {
+                     const contentLength = response.headers.get('content-length');
+                    const data = contentLength && parseInt(contentLength) > 0
+                    ? await response.json()
+                    : "";
+                    resolve(data);
+                }
+
+            });
+        }
+
+        async function getUsernameInfo()
+        {
+            return new Promise(async (resolve, reject) => 
+            {
+                let response = await fetch(url + "/getUsernameInfo");
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+            });
+        }
+
+        async function getDailyData(startDate, endDate, myusername) 
+        {
+
+            log("getDailyData from Server");
+
+            return new Promise(async (resolve, reject) => 
+            {
+                let response = await fetch(url + '/getDailyDateStart/' + startDate + "/" + myusername);
+
+                if(endDate != null)
+                {
+                    response = await fetch(url + '/getDailyDate/' + startDate + "/" + endDate + "/" + myusername);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+
+            });
+
+        }
+
+
+         async function getAllAccount() 
+        {
+
+            log("getAllUsername from Server");
+
+            return new Promise(async (resolve, reject) => 
+            {
+                
+                let response = await fetch(url + '/getAllUsername');
+            
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+
+            });
+
+        }
+
+
+        function showProgressDialog() {
+			progressDialog.style.display = "block";
+		}
+
+		function hideProgressDialog() {
+			progressDialog.style.display = "none";
+		}
+
+        function isBlank(val) 
+        {
+            if (val != undefined && String(val).trim().length != 0 && val != null && val != 'null')
+            return false;
+            return true;
+        }
+
+
+        let dataHM = new Map();
+
+
+        async function refetchDataAll(accounts)
+        {
+            return new Promise(async (resolve, reject) => 
+            {
+                try
+                {
+                    let totalToday = 0;
+                    let totalThisMonth = 0;
+                    let totalLastMonth = 0;
+                    let totalYesterday = 0;
+
+                    for (const obj of accounts) 
+                    {
+                        await refetchData(obj.username);
+
+                        let getToday = dataHM.get("Today_" + obj.username) || 0;
+                        if(getToday == "-")
+                            getToday = 0;
+
+                        let getThisMonth = dataHM.get("ThisMonth_" + obj.username) || 0;
+                         if(getThisMonth == "-")
+                            getThisMonth = 0;
+
+                        let getLastMonth = dataHM.get("Last Month_" + obj.username) || 0;
+                        if(getLastMonth == "-")
+                            getLastMonth = 0;
+
+                        let getYesterday = dataHM.get("Yesterday_" + obj.username) || 0;
+                        if(getYesterday == "-")
+                            getYesterday = 0;
+
+                        //log(getToday + " | " + getThisMonth + " | " + getLastMonth);
+                        
+                        if(isBlank(getToday) == false)
+                            totalToday = totalToday + parseFloat(getToday);
+
+                        if(isBlank(getThisMonth) == false)
+                            totalThisMonth = totalThisMonth + parseFloat(getThisMonth);
+
+                        if(isBlank(getLastMonth) == false)
+                            totalLastMonth = totalLastMonth + parseFloat(getLastMonth);
+
+                        if(isBlank(getYesterday) == false)
+                            totalYesterday = totalYesterday + parseFloat(getYesterday);
+                    }
+
+                    $("#divTodayTotal_Today").text(Math.floor(totalToday));
+                    $("#divTodayThisMonth_Today").text(Math.floor(totalThisMonth));
+                    $("#divTodayLastMonth_Today").text(Math.floor(totalLastMonth));
+                    $("#divTotal_Yesterday").text(Math.floor(totalYesterday));
+
+                  
+                }
+                finally
+                {
+                    resolve("");
+                }
+               
+                
+            });
+
+        }
+        
+        async function refetchData(myusername) 
+        {
+                var dailyDataDetailValue = null;
+                var thisMonthDataDetailValue = null;
+                var lastMonthDataDetailValue = null;
+
+                try
+                {
+        // showProgressDialog();
+                    log("refetch Data: " + myusername);
+                    await sleep(1000); // Simulate loading time
+
+                    var todayData = await getSolarData("id_target_today", false , myusername);
+                    var yesterdayData = await getSolarData("id_target_yesterday", false, myusername);
+                    var lastMonthDataSingleData = await getSolarData("id_target_last_month", false, myusername);
+
+                    log("yesterday data");
+                    log(yesterdayData);
+
+                    log("Last Month Data Single Data")
+                    log(lastMonthDataSingleData);
+
+                    if(lastMonthDataDetailValue == null || lastMonthDataDetailValue == "")
+                    {   
+                        //log("lastMonthDataDetailValue is null or empty, fetching detail data...");
+                        lastMonthDataDetailValue = await getSolarData("id_target_last_month_detail", true, myusername);
+
+                        log("last month chart data");
+                        log(lastMonthDataDetailValue);
+                    }
+
+                    // this month
+                    thisMonthDataDetailValue = await getSolarData("id_target_current_month_detail", true, myusername);
+                    log("thisMonthDataDetailValue");
+                    log(thisMonthDataDetailValue);
+
+                    // daily todaydetail
+                    let todayDate = moment().format('DDMMYYYY');
+                    dailyDataDetailValue = await getDailyData(todayDate, null, myusername);
+                
+
+
+                    const datasets = [
+                        { label: "Today", data: todayData },
+                        { label: "Yesterday", data: yesterdayData },
+                        { label: "Last Month", data: lastMonthDataSingleData }
+                    ];
+
+                    log("Today data");
+                    log(todayData);
+                    log("Yesterday data");
+                    log(yesterdayData);
+                    log("last month data");
+                    log(lastMonthDataSingleData);
+                    
+
+                    let container = document.getElementById("container_" + myusername);
+
+                    //log("container: " + container);              
+
+                    if(container == null) 
+                    {
+                        let mainColor = getColorRemaining();
+                        const gradientString = makeGradientFromMainColor(mainColor);
+
+                        //log(gradientString);
+
+                        container = document.createElement('div');
+                        container.id = "container_" + myusername;
+                        container.className = 'divAccountContainer';
+                        container.style.borderColor = mainColor;
+                        container.style.setProperty('--border-gradient', gradientString);
+                        container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
+                        document.body.appendChild(container);
+                    }
+                    else
+                    {
+                        container.innerHTML = '';
+                    }
+
+                    log("container ID: " + container.id);
+            
+                
+                    //container.innerHTML = '';            
+
+                    datasets.forEach(section => 
+                    {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'section';                
+
+                        const energyBlock = document.createElement('div');
+                        energyBlock.className = 'energy-block';
+
+
+                        const energyBlockA = document.createElement('div');
+                        energyBlockA.className = 'energy-block-a';
+
+                        const energyBlockB = document.createElement('div');
+                        energyBlockB.id = "chartBlock" + "_" + myusername;
+                        energyBlockB.className = "chartBlock";
+
+
+                        const netRevenue = document.createElement('div');
+                        netRevenue.className = 'net-revenue';
+                        netRevenue.id = 'divNetRevenue' + "_" + myusername;
+
+                        const installType = document.createElement('div');
+
+
+                        section.data.forEach(async item => 
+                        {
+                            if (item.data_type === 'earning_map') 
+                            {
+                                
+                                dataHM.set(section.label + "_" + myusername, item.value);
+
+                                if(section.label === 'Today')
+                                {
+                                    netRevenue.className = 'net-revenue net-revenue-today';
+                                    energyBlock.className = 'energy-block energy-block-today';           
+                                    
+                                     
+                                    installType.className = "installTypeClass";
+                                    installType.style.position = "absolute";
+                                    installType.style.marginTop = "15px";
+                                    installType.style.marginLeft = "400px"
+                                    installType.innerHTML = usernamesHM.get(myusername) ? usernamesHM.get(myusername) : myusername;
+                                }
+
+                                let toDisplay = section.label;
+                                if(section.label === 'Yesterday')
+                                {
+                                    toDisplay = 'This Month';
+                                }
+
+                                netRevenue.innerHTML = `
+                                ${section.label === 'Today' ? `<div class="live-indicator"><span class="dot2" id="logoSun"></span>Live ${section.label}<span class="accountInfo">&nbsp;&nbsp;${myusername.split("@")[0]}</span></div>` : ""}
+                                <div class='tinyLabelDiv'>${toDisplay} Revenue (${item.unit ? item.unit : "MYR"})</div>
+                                <div style="display:inline-flex"><div class='mainValueClass' id="mainValueDiv_${section.label}_${myusername}" >${item.value != '-' ? Math.floor(item.value) : item.value}</div><div id="mainValueDiv2_${section.label}_${myusername}" class="mainValueClass2"></div></div>`;
+
+
+                                if(section.label === 'Last Month')
+                                {             
+                                        const canvas = document.createElement('canvas');
+                                        canvas.className = 'lastMonthDetailChart';
+                                        
+
+                                        // Set its attributes
+                                        canvas.id = 'lastMonthDetailChart' + "_" + myusername;              
+                                        canvas.height = 220;
+                                        canvas.width = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1);
+                                        canvas.style.maxWidth = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1) + "px";
+
+                                        energyBlockB.appendChild(canvas);
+                                        energyBlock.appendChild(energyBlockB);
+
+                                        energyBlock.style = "display: inline-flex;";
+
+                                        
+                                        document.getElementById("thisDayDetailChart" + "_" + myusername).width = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1);
+                                        document.getElementById("thisDayDetailChart" + "_" + myusername).style.maxWidth = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1) + "px";
+
+                                    
+
+                                }
+                                else if(section.label === 'Yesterday')
+                                {
+                                        const canvas = document.createElement('canvas');
+                                        canvas.className = 'thisMonthDetailChart';
+
+                                        // Set its attributes
+                                        canvas.id = 'thisMonthDetailChart' + "_" + myusername;
+                                        //canvas.width = 800;
+                                        canvas.width = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1);
+                                        canvas.style.maxWidth = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1) + "px";
+
+                                    
+                                        canvas.height = 220;
+                                        energyBlockB.appendChild(canvas);
+                                        energyBlock.appendChild(energyBlockB);
+
+
+                                        log("test 2: " + (window.innerWidth - netRevenue.offsetWidth));
+
+                                        energyBlock.style = "display: inline-flex;";
+
+                                }
+                                else if(section.label == 'Today')  // this one run first
+                                {
+                                
+                                    const canvas = document.createElement('canvas');
+                                    canvas.className = 'thisDayDetailChart';
+
+                                    // Set its attributes
+                                    canvas.id = 'thisDayDetailChart' + "_" + myusername;
+                                    canvas.width = 0;                        
+                                
+                                    // canvas.width = window.innerWidth - (window.innerWidth * 0.4);
+                                    canvas.height = 220;
+                                    energyBlockB.appendChild(canvas);
+                                    energyBlock.appendChild(energyBlockB);
+
+
+                                    energyBlock.style = "display: inline-flex;";
+                                }
+                            
+
+                            } 
+                            else 
+                            {
+                                const p = document.createElement('p');
+                                p.className = 'block-text-energy';
+                                p.innerHTML = `<strong style='text-transform: uppercase; font-size:12px'>${item.type}</strong><br><span class="energy-block-number">${item.value}</span> ${item.unit}`;
+                    
+
+                            /////
+                                if(energyBlockA.children.length == 0)
+                                {
+                                    let sectionLabel = section.label;
+
+                                    if(section.label == 'Yesterday')
+                                    {
+                                        sectionLabel = 'TM';
+
+                                        const p2 = document.createElement('p');
+                                        p2.innerHTML = `<div style='text-transform: uppercase; font-size:100px;letter-spacing: 5px;'>${sectionLabel}</div>`;
+                                        energyBlockA.appendChild(p2);
+                                        energyBlock.appendChild(energyBlockA);
+                                    }
+                                    else if(section.label == 'Last Month')
+                                    {
+                                        sectionLabel = 'LM';
+
+                                        const p2 = document.createElement('p');
+                                        p2.innerHTML = `<div style='text-transform: uppercase; font-size:100px;letter-spacing: 5px;'>${sectionLabel}</div>`;
+                                        energyBlockA.appendChild(p2);
+                                        energyBlock.appendChild(energyBlockA);
+                                    }
+                                    else if(section.label == 'Today')
+                                    {
+                                        sectionLabel = 'TD';
+
+                                        const p2 = document.createElement('p');
+                                        p2.innerHTML = `<div style='text-transform: uppercase; font-size:100px;letter-spacing: 5px;'>${sectionLabel}</div>`;
+                                        energyBlockA.appendChild(p2);
+                                        energyBlock.appendChild(energyBlockA);
+                                    }
+                                }
+
+                            }
+                        });
+
+                        sectionDiv.appendChild(energyBlock);
+                        sectionDiv.appendChild(netRevenue);
+                        sectionDiv.appendChild(installType);
+                        container.appendChild(sectionDiv);
+                    });
+
+                    //
+                    // Get the first element with the class
+                    const mainValueElement = document.querySelector('.energy-block');
+
+
+                    if(lastMonthDataDetailValue != "")
+                    {
+                        loadLastMonthDetailChart(lastMonthDataDetailValue, lastMonthDataSingleData, myusername);
+                    }
+
+
+                    //log("b: " + thisMonthDataDetailValue);
+                    
+                    if(thisMonthDataDetailValue != "")
+                    {
+                        loadthisMonthDetailChart(thisMonthDataDetailValue, myusername);
+                    }
+                    else  // first day of the month
+                    {
+                        loadthisMonthDetailChart(thisMonthDataDetailValue, myusername);
+                    }
+
+
+                    if(dailyDataDetailValue != "")
+                    {
+                        let jsonData = dailyDataDetailValue.map(item => JSON.parse(item.json));
+                        loadDailyDayDetailChart(jsonData, todayData, myusername);
+                    }
+                
+
+                    
+                        // Hide the progress dialog after a delay
+                    
+                }
+                catch(err)
+                {
+                    log(err);
+                }
+                finally
+                {
+                    //log(available_accounts);
+
+                    // Check if the element exists
+                    const logoSunElement = document.getElementById('logoSun');
+
+                    if (logoSunElement) 
+                    {
+                    
+                        
+                        // this overwrites any listener
+                        logoSunElement.onclick = function () 
+                        {
+                            const container = document.createElement('div');
+                            container.style.textAlign = 'left';
+
+                            let accountSelected = getSavedAccounts();
+                            if(isBlank(accountSelected) == false)
+                            {
+                                accountSelected = JSON.parse(accountSelected);
+                            }
+
+
+                            available_accounts.forEach(user => {
+                                const label = document.createElement('label');
+                                label.style.display = 'block';
+                                label.style.fontSize = '28px'; // Set the font size
+                                label.style.margin = "10px";
+
+                                const checkbox = document.createElement('input');
+                                checkbox.type = 'checkbox';
+                                checkbox.name = 'user_cb';
+                                checkbox.value = user.min_vindex;
+                                checkbox.style.margin = '10px';
+                                checkbox.style.transform = 'scale(1.5)'; // makes checkbox 1.5 times bigger
+
+                               
+
+                                for(let i = 0; i < accountSelected.length; i++)
+                                {
+                                    if(user.username == accountSelected[i].username)
+                                    {
+                                        checkbox.checked = true;
+                                        break;
+                                    }
+                                }
+
+                                label.appendChild(checkbox);
+                                label.appendChild(document.createTextNode(' ' + user.username));
+
+                                container.appendChild(label);
+                            });
+
+
+                            container.onchange = function (e) {
+
+                                if (e.target.type === 'checkbox') 
+                                {
+                                    let selectedUsersTemp = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+                                        .map(cb => available_accounts.find(u => u.min_vindex === cb.value));
+
+                                    selectedUsers = selectedUsersTemp;
+
+                                    saveAccounts();
+                                }
+
+                            };
+                    
+
+                            // Show dialog
+                            const dialog = new SimpleDialog(container, {
+
+                                //// onClose listener
+                                onClose: async function () {
+                                    //alert('Dialog was closed!');
+                                    // Or do anything else here (like cleanup, reload, etc)
+
+                                    stopRefetchInterval();
+                                    showProgressDialog();
+                                    
+                                    
+
+                                    let accountSelected = getSavedAccounts();
+                                    if(isBlank(accountSelected) == false)
+                                    {
+                                        accountSelected = JSON.parse(accountSelected);
+                                    }
+
+
+                                    if(accountSelected.length == 0)
+                                    {
+                                        if(available_accounts.length != 0)
+                                        {
+                                            let temp = [];
+                                            temp.push(available_accounts[0]);
+                                            selectedUsers = temp
+                                            saveAccounts();
+
+                                        
+                                            location.reload();
+                                        }
+                                    }
+                                    else
+                                    {
+                                    
+                                    
+                                        location.reload();
+                                    }
+
+                                    //log(accountSelected[0].username);
+
+                                //  startRefetchInterval();
+
+                                //log(selectedUsers);
+                                }
+                            });
+                            dialog.show();
+                        };
+
+                    
+                    }
+
+                    setTimeout(hideProgressDialog, 1000);
+                }
+
+        }
+
+
+
+      
+
+        function saveAccounts()
+        {
+            localStorage.setItem('TGSolar_selectedUsers', JSON.stringify(selectedUsers));
+        }
+
+        function getSavedAccounts()
+        {
+            let data = localStorage.getItem('TGSolar_selectedUsers');
+            if(isBlank(data) == false)
+            {
+                data = JSON.parse(data);
+                data.sort((a, b) => a.username.localeCompare(b.username));
+                 return JSON.stringify(data);
+            }
+            else
+            {
+                return "[]";
+            }
+          
+           
+           
+        }
+
+
+        var available_accounts = [];
+
+        function log(message) {
+            console.log(message);
+        }
+
+        function toNumber(str) {
+            return parseFloat(str.replace(/,/g, ''));
+        }
+
+        function formatDate(dateStr) 
+        {
+            const dateParts = dateStr.split('/');
+            const day = dateParts[0];
+            const month = dateParts[1].slice(0,3); // e.g., "Jun"
+            const year = dateParts[2];
+
+            // Convert month name to number
+            const monthMap = {
+            Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+            Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+            };
+            const monthNum = monthMap[month];
+
+            // Get last two digits of year
+            const shortYear = year.slice(-2);
+
+            //return `${day}/${monthNum}/${shortYear}`;
+            return `${day}`;
+        }
+
+
+       
+        var lastMonthDataDetailChat_Map = new Map();
+
+        function loadLastMonthDetailChart(rawData, lastMonthDataSingleData, myusername) 
+        {
+            var lastMonthDataDetailChat = lastMonthDataDetailChat_Map.get(myusername);
+
+            if(lastMonthDataDetailChat == null)
+                lastMonthDataDetailChat_Map.set(myusername, lastMonthDataDetailChat);
+               
+             
+                const labels = rawData.map(item => formatDate(item.time));
+                const netRevenue = rawData.map(item => item.netRevenue);
+
+                // sum the each netRevenue
+                const totalNetRevenue = rawData
+                    .map(item => Number(item.netRevenue) || 0)
+                    .reduce((sum, value) => sum + value, 0);
+
+
+             
+             
+                if(lastMonthDataSingleData[3].value == null) // null means it has no revenue from the server
+                {
+                    // manually
+                    if(manualFixData == true)
+                    {
+                        document.getElementById("mainValueDiv_Last Month_" + myusername).innerText = Math.floor(totalNetRevenue);
+                        dataHM.set("Last Month_" + myusername, Math.floor(totalNetRevenue));
+                    }
+                }
+                
+
+                // Chart.js chartSetup
+                const data = {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Net Revenue (MYR)',
+                            data: netRevenue,
+                            borderColor: 'white', // Hex color
+                            backgroundColor: 'yellow', // RGBA for transparency
+                            tension: 0.2
+                        }
+                        // ,
+                        // {
+                        //     label: 'Purchased Energy',
+                        //     data: purchased,
+                        //     borderColor: 'rgb(54, 162, 235)',
+                        //     backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        //     tension: 0.2
+                        // },
+                        // {
+                        //     label: 'Load',
+                        //     data: load,
+                        //     borderColor: 'rgb(255, 99, 132)',
+                        //     backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        //     tension: 0.2
+                        // }
+                    ]
+                };
+
+                const chartSetup = {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                align: 'end',
+                                display: true,
+                                text: 'Net Revenue for Last Month',
+                                color: '#FFECA1' // X-axis tick labels
+                            },
+                        legend: {
+                            display: false,
+                        }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                         scales: {
+                            x: {
+                                ticks: {
+                                color: 'white' // X-axis tick labels
+                                },
+                                grid: {
+                                color: 'rgba(255,255,255,0.2)', // Grid line color
+                                drawBorder: false,
+                                }
+                            },
+                            y: {
+                                    ticks: 
+                                    {
+                                        color: 'white',
+                                        font: 
+                                        {
+                                            size: 50,
+                                            family: 'Courier New',  // 👈 Your custom font
+                                       
+                                        },
+                                        stepSize: 50 // 👈 Increase this to reduce how many ticks are shown
+                                        
+                                    },
+                                    grid: 
+                                    {
+                                        color: 'rgba(255,255,255,0.2)', // Grid line color
+                                        drawBorder: false,
+                                    }
+                                }
+                            }
+                    }
+                };
+
+                // Render chart
+                if (lastMonthDataDetailChat != null) 
+                    lastMonthDataDetailChat.destroy();
+
+                lastMonthDataDetailChat = new Chart(document.getElementById('lastMonthDetailChart' + "_" + myusername), chartSetup);
+                lastMonthDataDetailChat_Map.set(myusername, lastMonthDataDetailChat);
+            }
+
+ 
+            function getDaysOfMonth(month, year) {
+                    // month: 1-12 (January is 1)
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const monthIndex = month - 1; // Convert to 0-based for Date
+
+                    const daysInMonth = new Date(year, month, 0).getDate();
+
+                    const formattedDates = [];
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const dd = String(day).padStart(2, "0");
+                        const mmm = monthNames[monthIndex];
+                        formattedDates.push(`${dd}/${mmm}/${year}`);
+                    }
+                    return formattedDates;
+                }
+
+                // Example usage
+                //console.log(getDaysOfMonth(6, 2024)); // June 2024
+
+
+            var thisMonthDataDetailChat_Map = new Map();
+
+            function loadthisMonthDetailChart(rawData, myusername) 
+            {
+
+                var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
+
+                if(thisMonthDataDetailChat == null)
+                    thisMonthDataDetailChat_Map.set(myusername, thisMonthDataDetailChat);
+
+
+                if(rawData == "")
+                    rawData = [];
+                
+
+                //log("loadthisMonthDetailChart");
+                //log(rawData);
+                
+                try
+                {
+                    let todayDateTemp_Month = moment().format('MM');
+                    let todayDateTemp_Year = moment().format('YYYY');
+                    let thisMonthDataBlank = getDaysOfMonth(todayDateTemp_Month, todayDateTemp_Year); 
+                
+
+                    // push today's data into this month data
+                    {
+                        let obj = new Object();
+                        obj.time = moment().format('DD/MMM/YYYY');
+                        obj.netRevenue = dataHM.get("Today_" + myusername);
+
+                        rawData.push(obj);
+                    }
+            
+
+                    const labels = rawData.map(item => formatDate(item.time));
+
+                    //log("labels: " + labels);
+
+
+                    const netRevenue = rawData.map(item => item.netRevenue);
+
+                    let totalRevenueThisMonth = 0;
+
+                    for (let i = 0; i < netRevenue.length; i++) {
+                        totalRevenueThisMonth = totalRevenueThisMonth + netRevenue[i];
+                    }
+
+                    
+
+                    
+
+                    let totalRevenueThisMonthAndCurrent = (totalRevenueThisMonth);
+                    //log("totalRevenueThisMonth: " + totalRevenueThisMonthAndCurrent);
+
+                    // this month
+                    let valueYesterday = Math.floor(totalRevenueThisMonthAndCurrent);
+                    document.getElementById("mainValueDiv_Yesterday_" + myusername).innerText = (valueYesterday || "-");
+                    dataHM.set("ThisMonth_" + myusername, valueYesterday);
+                   
+
+                    /// yesterday
+                    let valueToday = Math.floor(dataHM.get("Yesterday" + "_" + myusername));
+                    document.getElementById("mainValueDiv2_Today_" + myusername).innerText = (valueToday || "-");
+                   
+                    
+                   // log("Test 1: " + valueYesterday + " | " + totalRevenueThisMonth + " | " + valueToday);
+                    
+                  
+
+                    log(dataHM);
+                    
+                //  document.getElementById("mainValueDiv_Yesterday").style = "color: #07FFB8";
+                //  document.getElementById("mainValueDiv_Last Month").style = "color: yellow";
+                //   document.getElementById("mainValueDiv2_Today").style = "color: rgb(221 113 74); padding-left: 50px;";
+
+                
+                
+
+                    // Chart.js chartSetup
+                    const data = {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Net Revenue (MYR)',
+                                data: netRevenue,
+                                borderColor: 'white', // Hex color
+                                backgroundColor: '#07FFB8', // RGBA for transparency
+                                tension: 0.2
+                            }
+                            // ,
+                            // {
+                            //     label: 'Purchased Energy',
+                            //     data: purchased,
+                            //     borderColor: 'rgb(54, 162, 235)',
+                            //     backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            //     tension: 0.2
+                            // },
+                            // {
+                            //     label: 'Load',
+                            //     data: load,
+                            //     borderColor: 'rgb(255, 99, 132)',
+                            //     backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            //     tension: 0.2
+                            // }
+                        ]
+                    };
+
+                    const chartSetup = {
+                        type: 'bar',
+                        data: data,
+                        options: {
+                            maintainAspectRatio: false,
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    align: 'end',
+                                    display: true,
+                                    text: 'Net Revenue for This Month',
+                                    color: '#FFECA1' // X-axis tick labels
+                                },
+                            legend: {
+                                display: false,
+                            }
+                            },
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            scales: {
+                                x: {
+                                    ticks: {
+                                    color: 'white' // X-axis tick labels
+                                    },
+                                    grid: {
+                                    color: 'rgba(255,255,255,0.2)', // Grid line color
+                                    drawBorder: false,
+                                    }
+                                },
+                                y: {
+                                    ticks: 
+                                        {
+                                            color: 'white',
+                                            font: 
+                                            {
+                                                size: 50,
+                                                family: 'Courier New',  // 👈 Your custom font
+                                            
+                                            },
+                                            stepSize: 50 // 👈 Increase this to reduce how many ticks are shown
+                                            
+                                        },
+                                    grid: {
+                                    color: 'rgba(255,255,255,0.2)', // Grid line color
+                                    drawBorder: false,
+                                    }
+                                }
+                                }
+                        }
+                    };
+
+                    // Render chart
+                    if (thisMonthDataDetailChat != null) 
+                        thisMonthDataDetailChat.destroy();
+
+                    thisMonthDataDetailChat = new Chart(document.getElementById('thisMonthDetailChart' + "_" + myusername),chartSetup);
+                    thisMonthDataDetailChat_Map.set(myusername, thisMonthDataDetailChat);
+                }
+                catch(err)
+                {
+                    log(err);
+                }
+                
+
+            }
+
+            function getHour(timeStr) {
+                // "06:25" => "06:00"
+                return timeStr.slice(0, 2) + ":00";
+            }
+
+            function aggregateHourly(data) {
+                const hourly = {};
+
+                data.forEach(entry => {
+                    const hour = getHour(entry.time);
+
+                    if (!hourly[hour]) {
+                        // Initialize sums and last cumulativeRM
+                        hourly[hour] = {
+                            time: hour,
+                            pv: 0,
+                            grid: 0,
+                            load: 0,
+                            energyKWh: 0,
+                            savingsRM: 0,
+                            cumulativeRM: entry.cumulativeRM // will be overwritten by last in hour
+                        };
+                    }
+
+                    hourly[hour].pv += entry.pv;
+                    hourly[hour].grid += entry.grid;
+                    hourly[hour].load += entry.load;
+                    hourly[hour].energyKWh += entry.energyKWh;
+                    hourly[hour].savingsRM += entry.savingsRM;
+                    hourly[hour].cumulativeRM = entry.cumulativeRM; // last value in hour
+                });
+
+                // Convert object to array
+                return Object.values(hourly);
+            }
+
+       
+    function aggregateHourlyNew(data) {
+            // 1. Sort data by time just in case
+            data = [...data].sort((a, b) => a.time.localeCompare(b.time));
+
+            // 2. Find the range of times
+            let times = data.map(entry => entry.time);
+
+            // Helper to convert "HH:MM" to minutes
+            function toMinutes(str) {
+                let [h, m] = str.split(':').map(Number);
+                return h * 60 + m;
+            }
+
+            // Find the first data time and create binning schedule
+            let startTime = data[0].time;
+            let currHour = Number(startTime.slice(0, 2));
+            // Edge case: if the very first is exactly on the HH:00, skip that hour
+            if (startTime.endsWith(":00")) {
+                currHour++;
+            } else {
+                currHour++;
+            }
+            let currMinute = 0;
+
+            // Get the final full hour for the data
+            let lastDataMin = toMinutes(data[data.length - 1].time);
+            let endHour = Number(data[data.length - 1].time.slice(0, 2));
+            if (Number(data[data.length - 1].time.slice(3, 5)) > 0) endHour++;
+
+            let results = [];
+
+            while (currHour <= endHour) {
+                // Define bin boundaries
+                let binStart = toMinutes(String(currHour - 1).padStart(2, '0') + ":01");
+                let binEnd = toMinutes(String(currHour).padStart(2, '0') + ":00");
+
+                // Filter entries in this bin
+                let binEntries = data.filter(entry => {
+                    let min = toMinutes(entry.time);
+                    return min >= binStart && min <= binEnd;
+                });
+
+                if (binEntries.length > 0) {
+                    let agg = {
+                        time: String(currHour).padStart(2, '0') + ':00',
+                        pv: 0,
+                        grid: 0,
+                        load: 0,
+                        energyKWh: 0,
+                        savingsRM: 0,
+                        cumulativeRM: binEntries[binEntries.length - 1].cumulativeRM
+                    };
+                    for (let entry of binEntries) {
+                        agg.pv += entry.pv;
+                        agg.grid += entry.grid;
+                        agg.load += entry.load;
+                        agg.energyKWh += entry.energyKWh;
+                        agg.savingsRM += entry.savingsRM;
+                    }
+                    results.push(agg);
+                }
+                currHour++;
+            }
+            return results;
+        }
+
+        //////////////////////
+     
+      
+        function aggregateByIntervalV2(data, binSizeMinutes = 60) {
+    // Sort data by time
+    data = [...data].sort((a, b) => a.time.localeCompare(b.time));
+    if (data.length === 0) return [];
+
+    // Helpers
+    function toMinutes(str) {
+        let [h, m] = str.split(':').map(Number);
+        return h * 60 + m;
+    }
+    function fromMinutes(min) {
+        let h = Math.floor(min / 60);
+        let m = min % 60;
+        return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+
+    // Start from first time in data
+    let firstMin = toMinutes(data[0].time);
+
+    // Find the first bin end (the first "00", "30", etc. strictly after the first data point)
+    let binEnd = Math.ceil(firstMin / binSizeMinutes) * binSizeMinutes;
+    // (Edge-case: If start is exactly on bin boundary (":00", ":30"), should skip that? Original does.)
+
+    if (firstMin % binSizeMinutes === 0) {
+        binEnd += binSizeMinutes;
+    }
+
+    // Define bins: Each bin is (previous_bin_end - binSizeMinutes + 1) ... (binEnd) inclusive
+    let results = [];
+    let lastCumRM = 0;
+    while (binEnd <= toMinutes(data[data.length - 1].time) + binSizeMinutes) {
+        let binStart = binEnd - binSizeMinutes + 1;
+        // "00:01" to "01:00", "01:01" to "02:00", etc
+
+        // Filter entries in this bin (inclusive boundaries)
+        let binEntries = data.filter(entry => {
+            let min = toMinutes(entry.time);
+            return min >= binStart && min <= binEnd;
+        });
+
+        if (binEntries.length > 0) {
+            let agg = {
+                time: fromMinutes(binEnd),    // Use the bin END as the label as original (e.g. "09:00")
+                pv: 0,
+                grid: 0,
+                load: 0,
+                energyKWh: 0,
+                savingsRM: 0,
+                cumulativeRM: binEntries[binEntries.length - 1].cumulativeRM
+            };
+            for (let entry of binEntries) {
+                agg.pv += entry.pv;
+                agg.grid += entry.grid;
+                agg.load += entry.load;
+                agg.energyKWh += entry.energyKWh;
+                agg.savingsRM += entry.savingsRM;
+            }
+            results.push(agg);
+        }
+        binEnd += binSizeMinutes;
+    }
+
+    return results;
+}
+
+
+            function recalculateSavings(data, tariffRate = 0.37) {
+                let dataReturn = [];
+
+                let cumulative = 0;
+                const intervalHours = 5 / 60; // 5 minutes in hours
+
+                dataReturn = data.map((item, idx) => {
+                    // Calculate PV energy for this interval (kWh)
+                    const energyKWh = item.pv * intervalHours / 1000;
+                    // Calculate savings for this interval
+                    const savingsRM = parseFloat((energyKWh * tariffRate).toFixed(2));
+                    // Update cumulative
+                    cumulative = +(cumulative + savingsRM).toFixed(2);
+
+                    return {
+                        ...item,
+                        energyKWh: +energyKWh, // update energyKWh
+                        savingsRM,
+                        cumulativeRM: cumulative,
+                    };
+                });
+
+                return dataReturn;
+            }
+                
+
+
+                function calculateCumulativeRM_Daily(data, ratePerKWh = 0.37, intervalMinutes = 5) 
+                {
+                    let cumulativeRM = 0;
+                    const results = [];
+
+                    data.forEach((entry, index) => {
+
+                    const pvW = entry.pv ?? 0;
+                    const grid = entry.grid ?? 0;
+                    const load = entry.load ?? 0;
+
+                    const energyKWh = (pvW / 1000) * (intervalMinutes / 60); // Convert to kWh
+                    const savingsRM = energyKWh * ratePerKWh;
+
+                    // Round to nearest sen (0.01)
+                    const roundedRM = Math.floor(savingsRM * 100) / 100;
+
+                    // Only add real RM value (0.01 and above)
+                    cumulativeRM += roundedRM;
+
+                    results.push({
+                    time: entry.time,
+                    pv: entry.pv || 0,
+                    grid: entry.grid || 0,
+                    load: entry.load || 0,
+                    energyKWh: energyKWh || 0,
+                    savingsRM: roundedRM || 0,
+                    cumulativeRM: cumulativeRM || 0
+                    });
+                    });
+
+                    return results;
+                }
+
+            //
+          
+
+            var thisDayDailyDataDetailChat_Map = new Map();
+
+            function loadDailyDayDetailChart(rawData, todayData, myusername) 
+            {
+                log("raw data original: " + myusername);
+                
+
+                var thisDayDailyDataDetailChat = thisDayDailyDataDetailChat_Map.get(myusername);
+
+                if(thisDayDailyDataDetailChat == null)
+                    thisDayDailyDataDetailChat_Map.set(myusername, thisDayDailyDataDetailChat);
+                
+             
+                rawData = recalculateSavings(rawData);
+                // let rawDataHourly = aggregateHourlyNew(rawData);
+
+                let rawDataHourly = aggregateByIntervalV2(rawData, 30); //
+
+                log("savings: " + myusername);
+                log(rawData);
+
+              
+                //// start exactly at the first pv > 0, keep the one entry just before it
+                let firstPVIndex = rawDataHourly.findIndex(item => item.pv > 0);
+                let startIndex = Math.max(firstPVIndex - 1, 0);
+                rawDataHourly = rawDataHourly.slice(startIndex);
+                ////
+
+                log("today data");
+                log(rawDataHourly);
+               
+                let todayDate = moment().format('DD/MM/YYYY');
+             
+                const labels = rawDataHourly.map(item => (todayDate + " " + item.time));
+                //const netRevenue = rawDataHourly.map(item => item.cumulativeRM);
+                const savingsRM = rawDataHourly.map(item => item.savingsRM);
+                const pvData = rawDataHourly.map(item => item.pv);
+
+                // manually calculate culmulative savings
+                let cumulative = 0;
+                const netRevenue = savingsRM.map(value => {
+                    cumulative += parseFloat(value); // ensure it's number
+                    return parseFloat(cumulative.toFixed(2)); // round to 2 decimal
+                });
+
+                log("cumulative (today): " + cumulative + " | " + myusername); // display today (manually)
+
+                if(todayData[3].value == null && manualFixData == true) // null means it has no revenue from the server
+                {
+                     log("manually set today");
+
+                     document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText = Math.floor(cumulative);
+
+                     dataHM.set("Today_" + myusername, Math.floor(cumulative));
+
+                     var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
+
+                     /// get data from chart manually
+                     let currentIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 1; // get yesterday
+                     let yesterdayIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 2; // get 2 days ago
+                     let yesterdayDataTemp = thisMonthDataDetailChat.data.datasets[0].data[yesterdayIndexTemp];
+                     log("yesterdayDataTemp: " + yesterdayDataTemp);
+
+                     document.getElementById("mainValueDiv2_Today" + "_" + myusername).innerText = Math.floor(yesterdayDataTemp) || "-";
+
+                  
+                    dataHM.set("Yesterday_" + myusername, Math.floor(yesterdayDataTemp) || 0);
+
+                     /// set data to chart manually
+                     thisMonthDataDetailChat.data.datasets[0].data[currentIndexTemp] = Math.floor(cumulative); // Update value for 'B'
+                     thisMonthDataDetailChat.update();
+
+
+                     //
+                     let totalMonthValue = document.getElementById("mainValueDiv_Yesterday" + "_" + myusername).innerText;
+                     totalMonthValue = parseInt(totalMonthValue)
+                     log("totalMonthValue: " + totalMonthValue);
+                     
+
+                     let mainValueDiv_Today = document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText;
+                     mainValueDiv_Today = parseInt(mainValueDiv_Today) + totalMonthValue;
+
+
+                     document.getElementById("mainValueDiv_Yesterday" + "_" + myusername).innerText = mainValueDiv_Today || "-";
+
+                     dataHM.set("ThisMonth_" + myusername, mainValueDiv_Today);
+
+                     //log(dataHM);
+
+                }
+            
+
+                //if(todayData[3].)
+
+                
+
+                const data = {
+                    labels: labels,
+                    datasets: [
+                        {
+                            // pointBackgroundColor: 'rgb(77, 77, 255)', // Dot fill color 
+                            // pointBorderColor: 'white',
+                            pointRadius: 1, // Make dots bigger
+                            label: 'PV (W)',
+                            data: pvData,
+                            borderColor: '#FC0101',
+                            borderWidth: 20, // thickness of the line: default is 3
+                            backgroundColor: 'rgba(77, 77, 255, 0.8)',  // w
+                            tension: 0.2,
+                            yAxisID: 'y1',
+                            order: 0 
+                        },
+                         {
+                            fill: true,
+                            order: 1,
+                            label: 'Culmulative Net Revenue (MYR)',
+                            data: netRevenue,
+                            borderColor: 'orange', // Hex color
+                            backgroundColor: 'rgba(244, 237, 14, 0.5)', // RGBA for transparency
+                            borderWidth: 20, // thickness of the line: default is 3
+                            // pointBorderColor: 'white',
+                            // pointBackgroundColor: 'rgb(244, 237, 14)', // Dot fill color
+                            pointRadius: 1, // Make dots bigger
+                            tension: 0.2,
+                            yAxisID: 'y'
+                        }
+                    ]
+                };
+
+                const chartSetup = {
+                    type: 'line',
+                    data: data,
+                    options: {
+                        maintainAspectRatio: false, // allows you to set a custom height
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Net Revenue for Today',
+                                color: '#FFECA1',
+                                align: 'end' // Moves title to the right
+                            },
+                        legend: {
+                            display: true,
+                            align: 'end', 
+                            labels: {
+                                color: 'white' // Change to your preferred color
+                            }   
+                        }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                         scales: {
+                          
+                                x: {
+                                    ticks: 
+                                    {
+                                        font: 
+                                        {
+                                            size: 10,
+                                            family: 'Courier New',  // 👈 Your custom font
+                                        
+                                        },
+                                        color: 'white',
+                                        callback: function (value, index, ticks) 
+                                        {
+                                            const label = this.getLabelForValue(value);
+                                            // label is like "10/7/2025 06:30"
+                                            return label.split(' ')[1] || label;
+                                        }
+                                    },
+                                    grid: {
+                                        color: 'rgba(255,255,255,0.2)', // Grid line color
+                                        drawBorder: false,
+                                    }
+                                    
+                                    
+                                },
+                                y: {
+                                    ticks: 
+                                    {
+                                        
+                                        color: 'rgb(244, 237, 14)',
+                                        font: 
+                                        {
+                                            size: 50,
+                                            family: 'Courier New',  // 👈 Your custom font
+                                        
+                                        },
+                                        stepSize: 50 // 👈 Increase this to reduce how many ticks are shown
+                                        
+                                    },
+                                    grid: 
+                                    {
+                                        color: 'rgba(255,255,255,0.2)', // Grid line color
+                                        drawBorder: false,
+                                    },
+                                    beginAtZero: true,
+                                },
+                                y1: {
+                                    // your axis chartSetup
+                                        ticks: 
+                                        {
+                                            display: true,
+                                            beginAtZero: true,
+                                            color: '#9494FF',
+                                            padding: 5,
+                                            offset: true,
+
+                                        }
+                                },
+                            
+                            }
+                    }
+                };
+
+                // Render chart
+                if (thisDayDailyDataDetailChat != null) 
+                    thisDayDailyDataDetailChat.destroy();
+
+                thisDayDailyDataDetailChat = new Chart(document.getElementById('thisDayDetailChart' + "_" + myusername),chartSetup);
+                thisDayDailyDataDetailChat_Map.set(myusername, thisDayDailyDataDetailChat);
+            }
+            //
+        
+        const brightColors = [
+              "#00E5FF", // bright cyan
+                "#00FF00", // lime
+               "#FF9800", // orange
+                "#FF00FF", // magenta
+                "#FFEB3B", // bright yellow
+                "#D500F9", // violet
+                "#FF1744", // red-pink
+                "#1DE9B6", // aquamarine
+                "#FFD600"  // light yellow
+            ];
+
+        function getColorRemaining() 
+        {
+            if (brightColors.length === 0) {
+                return "white"; // or fallback color if you want
+            }
+            return brightColors.shift();
+        }
+
+        function hexToHSL(hex) {
+    // Remove #
+    hex = hex.replace('#', '');
+    // Convert 3-digit to 6-digit
+    if(hex.length === 3){
+        hex = hex.split('').map(x=>x+x).join('');
+    }
+    let r = parseInt(hex.substring(0,2),16);
+    let g = parseInt(hex.substring(2,4),16);
+    let b = parseInt(hex.substring(4,6),16);
+
+    r /= 255; g /= 255; b /= 255;
+
+    let max = Math.max(r,g,b), min = Math.min(r,g,b);
+    let h, s, l = (max + min) / 2;
+
+    if(max == min){
+        h = s = 0; // achromatic
+    }else{
+        let d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch(max){
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return {
+        h: Math.round(h*360),
+        s: Math.round(s*100),
+        l: Math.round(l*100)
+    };
+}
+
+function makeGradientFromMainColor(mainHex) {
+    const hsl = hexToHSL(mainHex);
+    // Generate lighter and darker shades, e.g. L-25, L, L+20
+    let light1 = `hsl(${hsl.h},${hsl.s}%,${Math.min(hsl.l+20, 95)}%)`;
+    let base = `hsl(${hsl.h},${hsl.s}%,${hsl.l}%)`;
+    let dark1 = `hsl(${hsl.h},${hsl.s}%,${Math.max(hsl.l-25, 15)}%)`;
+    // Symmetrical for looping:
+    return [dark1, base, light1, base, dark1].join(', ');
+}
+
+        var selectedUsers = [];
+
+        var firstUsernameInit = null;
+
+        let manualFixData = true;
+
+        let usernamesHM = new Map();
+
+        $(document).ready(async function () 
+        {
+            showProgressDialog();            
+
+            available_accounts = await getAllAccount(); // get all account from server           
+
+            let usernameInfo = await getUsernameInfo();
+            usernameInfo.forEach(user => 
+            {
+                usernamesHM.set(user.username, user.description);
+            });
+
+            
+            // init top
+            {
+                let mainColor = getColorRemaining();
+                const gradientString = makeGradientFromMainColor(mainColor);
+                let container = document.createElement('div');
+                container.id = "container_top";
+                container.className = 'divAccountContainerTop';
+                container.style.borderColor = mainColor;
+                container.style.setProperty('--border-gradient', gradientString);
+                container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
+              
+                ///
+                const divLastMonthTotalMain = document.createElement('div');
+                divLastMonthTotalMain.style.display = "grid";
+                divLastMonthTotalMain.style.justifyItems = "center";
+
+                const divTotalThisMonthMain = document.createElement('div');
+                divTotalThisMonthMain.style.display = "grid";
+                divTotalThisMonthMain.style.justifyItems = "center";
+
+                const divTodayTotalMain = document.createElement('div');
+                divTodayTotalMain.style.display = "grid";
+                divTodayTotalMain.style.justifyItems = "center";
+
+
+                ///// total last month
+
+                let labelThisLastTotal = document.createElement('label');
+                labelThisLastTotal.className = "labelTotal";
+                labelThisLastTotal.appendChild(document.createTextNode('Last Month'));
+                
+
+                const divLastMonthTotal = document.createElement('div');
+                divLastMonthTotal.id = "divTodayLastMonth_Today";
+                divLastMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+                divLastMonthTotal.innerHTML = "-";
+
+                divLastMonthTotalMain.appendChild(labelThisLastTotal);
+                divLastMonthTotalMain.appendChild(divLastMonthTotal); 
+                container.appendChild(divLastMonthTotalMain);  
+
+
+                ////////// total this month
+              
+
+                let labelThisMonthTotal = document.createElement('label');
+                labelThisMonthTotal.className = "labelTotal";
+                labelThisMonthTotal.appendChild(document.createTextNode('This Month'));
+                
+
+                const divThisMonthTotal = document.createElement('div');
+                divThisMonthTotal.id = "divTodayThisMonth_Today";
+                divThisMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+                divThisMonthTotal.innerHTML = "-";
+
+                divTotalThisMonthMain.appendChild(labelThisMonthTotal);
+
+                let divThisMonthTotal_Layout = document.createElement('div');
+                divThisMonthTotal_Layout.style.display = "inline-flex";
+
+                divThisMonthTotal_Layout.appendChild(divThisMonthTotal);
+                divTotalThisMonthMain.appendChild(divThisMonthTotal_Layout); 
+
+
+                container.appendChild(divTotalThisMonthMain);  
+
+
+                //////  today total
+                let labelToday = document.createElement('label');
+                labelToday.className = "labelTotal";
+                labelToday.appendChild(document.createTextNode('Today'));
+
+                let sunTotalToday = document.createElement('span');
+                sunTotalToday.className = "dot2";
+
+                const divTodayLayout = document.createElement('div');
+                divTodayLayout.style.display = "inline-flex";
+                
+
+                const divTodayTotal = document.createElement('div');
+                divTodayTotal.id = "divTodayTotal_Today";
+                divTodayTotal.innerHTML = "-";
+                divTodayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+
+                const divYesterdayTotal = document.createElement('div');
+                divYesterdayTotal.id = "divTotal_Yesterday";
+                divYesterdayTotal.innerHTML = "-";
+                divYesterdayTotal.className = "mainValueClass2";
+                divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+
+                divTodayLayout.appendChild(divTodayTotal);
+                divTodayLayout.appendChild(divYesterdayTotal);
+
+                const divTodayTotal_Top = document.createElement('div');
+                divTodayTotal_Top.style = "display: inline-flex;align-items: center;";
+                divTodayTotal_Top.appendChild(sunTotalToday)
+                divTodayTotal_Top.appendChild(labelToday);
+
+                divTodayTotalMain.appendChild(divTodayTotal_Top)
+                divTodayTotalMain.appendChild(divTodayLayout);   
+
+                container.appendChild(divTodayTotalMain); 
+                //////////
+                
+                document.body.appendChild(container);
+
+
+            }
+
+        
+
+            if(available_accounts != "")
+            {
+                let countMatch = 0;
+
+                // double check with server
+                let accountSelected = getSavedAccounts();                
+
+                if(accountSelected != null)
+                {
+                    accountSelected = JSON.parse(accountSelected);
+
+                    if(accountSelected.length != 0)
+                    {
+                        available_accounts.forEach(user => 
+                        {
+                            if(isBlank(accountSelected) == false)
+                            {
+                                firstUsernameInit = accountSelected[0].username;
+
+                                for(let i = 0; i < accountSelected.length; i++)
+                                {
+                                    if(user.username == accountSelected[i].username)
+                                    {
+                                        countMatch = countMatch + 1;
+                                    }
+                                }
+                            }
+                        });
+
+                        if(countMatch == accountSelected.length)
+                        {
+                            log("OK MATCH");
+                            log(firstUsernameInit);
+
+                        
+                            await startRefetchInterval();
+                        }
+                    }
+                    else // account selected
+                    {
+                        let temp = [];
+                        temp.push(available_accounts[0]);
+                        selectedUsers = temp
+                        saveAccounts();
+
+                    
+
+                        await startRefetchInterval();
+                    
+
+                    }
+                }
+                else // new clean init
+                {
+                    ///
+                    let temp = [];
+                    temp.push(available_accounts[0]);
+                    selectedUsers = temp
+                    saveAccounts();
+                    
+                  
+                    //////
+                    await startRefetchInterval();
+                }
+        
+              
+            }
+
+        });
+
+        /////
+        function updateCountdownDisplay() 
+        {
+            $("#topLeft").text("Refresh In " + countdown + "s");
+        }
+
+   
+        let intervalId = null; // Store the interval reference
+
+        
+        ///
+        const gapToRefetch = 60; // seconds (5s for demo, adjust as needed)
+        let countdown = gapToRefetch;
+        let countdownId = null;  // manages the countdown interval
+        let refreshCount = 0;
+ 
+
+        async function startRefetchInterval() {
+            // Optionally clear an old interval
+
+            let accountSelected = getSavedAccounts();
+            if(isBlank(accountSelected) == false)
+            {
+                accountSelected = JSON.parse(accountSelected);
+
+                await refetchDataAll(accountSelected);
+
+            }
+
+           
+
+            if (countdownId) clearInterval(countdownId);
+
+            countdown = gapToRefetch;
+            updateCountdownDisplay();
+
+            countdownId = setInterval(async () => {
+                countdown--;
+                updateCountdownDisplay();
+
+                if (countdown <= 0) 
+                {
+                    countdown = gapToRefetch + 1; // reset countdown
+                   
+                    let accountSelected = getSavedAccounts();
+                    if(isBlank(accountSelected) == false)
+                    {
+                        accountSelected = JSON.parse(accountSelected);
+                    
+                        refreshCount = refreshCount + 1;
+
+                        if(refreshCount % 30 == 0) // every 30 minutes, refetch all data
+                        {
+                            location.reload();
+                        }
+                        else
+                        {
+                             await refetchDataAll(accountSelected);
+                        }
+                    }
+
+
+                    updateCountdownDisplay();
+                }
+            }, 1000);
+        }
+
+        function stopRefetchInterval() 
+        {
+
+            if (countdownId) {
+                clearInterval(countdownId);
+                countdownId = null;
+            }
+        }
+
+
+    </script>
+
+  
+
+</head>
+
+<body>
+
+    <div id="topLeft">
+        
+    </div>
+
+    <div class="backgroundLogo"></div>
+
+    <div id="progressDialog" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="loader"></div>
+        </div>
+    </div>
+    
+
+
+
+
+
+    
+
+</body>
+
+</html>

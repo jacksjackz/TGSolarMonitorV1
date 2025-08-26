@@ -1,0 +1,1 @@
+localhost*tgsolarmonitoring*postgres*password*5432

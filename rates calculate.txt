@@ -1,0 +1,5 @@
+If you saved grid cost by using solar internally (self-consumption), and the grid price is ~RM0.37/kWh (TNB commercial rate in Malaysia):
+
+Solar used internally = Daily yield = 170.4 kWh
+
+Estimated savings: 170.4 × RM0.37 ≈ RM63.05
