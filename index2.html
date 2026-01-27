@@ -1,0 +1,3628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <link rel="stylesheet" type="text/css" href="css/modal_dialog.css">
+    <link rel="stylesheet" type="text/css" href="css/simple_dialog.css">
+
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"
+        integrity="sha256-kmHvs0B+OpCW5GVHUNjv9rOmY0IvSIRcf7zGUDTDQM8=" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <link rel="icon" href="res/favicon.png" type="image/png">
+
+    <script src="js/SimpleDialog.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght,ROND@100..900,0..100&display=swap" rel="stylesheet">
+
+    <title>TG Solar Monitoring</title>
+
+    <style>
+        #containerMain *:not(canvas) {
+            /* width: 50%; */
+            box-sizing: border-box;
+
+        }
+
+        #containerMain {
+            display: inline-flex;
+            justify-content: space-between;
+            flex-direction: row;
+            width: 100%;
+
+        }
+
+        .ratio-label {
+            font-weight: normal;
+        }
+
+        .val-min {
+            color: #f1c40f;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        /* A nicer yellow */
+        .val-curr {
+            color: #00ff6a;
+            font-weight: bold;
+        }
+
+        /* A nicer green */
+        .val-max {
+            color: #e74c3c;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        /* A nicer red */
+
+
+        .accountInfo {
+            color: rgb(114, 175, 255);
+            font-size: 0.7vw;
+        }
+
+        #topLeft {
+            color: white;
+            position: absolute;
+            left: 30px;
+            top: 30px;
+            user-select: none;
+            /* Disables text selection */
+            cursor: default;
+            /* Disables pointer cursor */
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: black;
+
+
+        }
+
+        .animated-border {
+            position: relative;
+            padding: 20px;
+            /* border-radius: 8px; (optional) */
+            z-index: 1;
+        }
+
+        .animated-border::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            /* shorthand for top/right/bottom/left: 0 */
+            padding: 3px;
+            /* border thickness */
+            background: linear-gradient(90deg, #FFD600, #00FF00, #FF1744, #FFD600);
+            background-size: 300% 100%;
+            border-radius: inherit;
+            /* if you want rounded corners */
+            z-index: -1;
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: bordermove 2s linear infinite;
+        }
+
+        @keyframes bordermove {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .backgroundLogo {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* Center horizontally and vertically */
+            width: 75%;
+            height: 75%;
+            background-image: url('res/logo.png');
+            background-size: contain;
+            /* Or cover, depending on your preference */
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.2;
+            /* Low opacity */
+            z-index: -1;
+            /* Behind other content */
+            pointer-events: none;
+            /* So it doesn't block clicks */
+        }
+
+        .installTypeClass {
+            color: #eeff00;
+            font-size: 2.5vw;
+            font-family: sans-serif;
+            text-shadow: 0px 0px 9px #00d0ff;
+            letter-spacing: 3px;
+            padding-left: 10px;
+            padding-top: 0px;
+            white-space: nowrap;
+            display: none;
+        }
+
+        .installTypeExtraClass {
+            font-family: sans-serif;
+            padding-left: 375px;
+            padding-top: 0px;
+            position: absolute;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .desc-row {
+            font-size: 1.0vw;
+            letter-spacing: 1px;
+            text-shadow: 0px 0px 3px #000;
+        }
+
+        .desc-key {
+            color: #fbff00;
+            /* Dimmed cyan/grey */
+            font-weight: normal;
+        }
+
+        .desc-val {
+            color: #00ffea;
+            /* Bright cyan */
+            font-weight: bold;
+            text-shadow: 0px 0px 5px #00d0ff;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            color: rgb(77 255 0);
+            font-family: sans-serif;
+            justify-self: center;
+            font-size: 1vw;
+
+        }
+
+        .dot {
+            height: 25px;
+            width: 25px;
+            margin-right: 20px;
+            background-color: red;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+            display: none;
+        }
+
+        @keyframes rotateClockwise {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            body * {
+                display: none !important;
+                /* hide everything */
+            }
+
+            #mobileDiv,
+            #mobileDiv * {
+                display: block !important;
+                /* keep this div and its children visible */
+            }
+
+            .mobileMessage {
+                font-size: 5vw;
+                color: white;
+                text-align: center;
+                margin: 20px;
+            }
+        }
+
+
+        .tinyLabelDiv {
+            font-size: 0.8vw;
+            color: white;
+        }
+
+        .divAccountContainerTop {
+
+            letter-spacing: 30px;
+            font-family: "Doto", sans-serif;
+            font-size: 5.5vw;
+            color: white;
+            text-align: center;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            position: relative;
+            border: #00f2ff 5px solid;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-sizing: border-box;
+            outline-offset: -4px;
+            row-gap: 5px;
+
+            padding-left: 50px;
+            padding-right: 50px;
+
+            /* font-size: clamp(1.5rem, 5.5vw, 4rem);
+            padding: clamp(1rem, 5vw, 3rem);
+            letter-spacing: clamp(2px, 1.5vw, 30px); */
+
+
+            /* padding-bottom: 75px; */
+        }
+
+        .divAccountContainer {
+            width: 100%;
+            position: relative;
+            border: #00f2ff 5px solid;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-sizing: border-box;
+            outline-offset: -4px;
+
+            row-gap: 5px;
+
+            display: inline-grid;
+            justify-items: stretch;
+
+        }
+
+
+        /* The magic flowing border */
+        .divAccountContainer::before {
+            content: "";
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 12px;
+            padding: 0;
+            border: 5px solid transparent;
+            background:
+                linear-gradient(120deg, var(--border-gradient, #00f2ff, #ff00cc, #00f2ff)) 0 0/300% 300%;
+            background-clip: border-box;
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0) border-box;
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: flowing-border 9s linear infinite;
+        }
+
+
+        /* The magic flowing border */
+        .divAccountContainerTop::before {
+            content: "";
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 12px;
+            padding: 0;
+            border: 5px solid transparent;
+            background:
+                linear-gradient(120deg, var(--border-gradient, #00f2ff, #ff00cc, #00f2ff)) 0 0/300% 300%;
+            background-clip: border-box;
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0) border-box;
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            animation: flowing-border 9s linear infinite;
+        }
+
+
+
+        @keyframes flowing-border {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 300% 0;
+            }
+        }
+
+        .labelTotal {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+                Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            font-size: 4.0vw;
+            color: rgb(234, 255, 0);
+            font-weight: 400;
+            /* font-weight: 1000; */
+            letter-spacing: 10px;
+            text-shadow: 10px 10px 10px rgb(69, 69, 1);
+            margin-top: -40px;
+
+        }
+
+        .dot2 {
+            cursor: pointer;
+            background-image: url('../res/sunicon.png');
+            height: auto;
+            width: 100px;
+            margin-right: 20px;
+            border-radius: 50%;
+            /* animation: blink 1s infinite; */
+            animation: rotateClockwise 5s linear infinite;
+            /* 2s duration, smooth, repeat forever */
+
+            background-size: contain;
+            /* Keep image aspect ratio */
+            background-repeat: no-repeat;
+            background-position: center;
+            aspect-ratio: 1 / 1;
+
+            user-select: none;
+            /* Disables text selection */
+            cursor: default;
+            /* Disables pointer cursor */
+        }
+
+        @keyframes blink {
+
+            0%,
+            50%,
+            100% {
+                opacity: 1;
+            }
+
+            25%,
+            75% {
+                opacity: 0;
+            }
+        }
+
+
+        h3 {
+            color: white;
+        }
+
+        .energy-block-number {
+            font-weight: bold;
+            color: #00f7ff;
+            /* You can style this however you want */
+            font-size: 1.2em;
+        }
+
+        body {
+            user-select: none;
+            /* Disables text selection */
+            cursor: default;
+            /* Disables pointer cursor */
+        }
+
+        .energy-block-a {
+            user-select: none;
+            /* Disables text selection */
+            cursor: default;
+            /* Disables pointer cursor */
+
+        }
+
+        .mainValueClass {
+            font-size: 4.5vw;
+            color: #ffffff;
+            display: block;
+            margin-top: 10px;
+            letter-spacing: 20px;
+            align-content: center;
+
+            font-family: "Doto", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+            text-shadow: 10px 10px 10px rgb(69, 69, 1);
+        }
+
+        .status-sideways {
+
+            color: #ffff00;
+            align-content: center;
+            text-shadow: 1px 1px 1px rgb(255, 255, 161);
+        }
+
+        .status-up {
+            color: #62ff00;
+            align-content: center;
+            text-shadow: 1px 1px 1px rgb(152, 255, 161);
+        }
+
+        .status-down {
+            color: #ff5454;
+            align-content: center;
+            text-shadow: 1px 1px 1px rgb(255, 161, 161);
+        }
+
+        .currentStatusIndicator {
+            font-size: 5.0vw;
+            display: inline-block;
+            letter-spacing: 20px;
+            font-family: "Doto", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+            padding-right: 30px;
+        }
+
+        /* Blinking effect */
+        .blinkTrend {
+            animation: blinkAnimation 1s steps(2, start) infinite;
+        }
+
+        @keyframes blinkAnimation {
+            to {
+                visibility: hidden;
+            }
+        }
+
+        .mainValueClass2 {
+
+            color: #ffffff;
+            display: block;
+            /* margin-top: 10px; */
+            letter-spacing: 20px;
+
+
+            font-family: "Doto", sans-serif;
+            font-optical-sizing: auto;
+            font-weight: 900;
+            font-style: normal;
+            font-variation-settings: "ROND" 0;
+
+            font-size: 3.0vw;
+            color: #ab7865;
+            padding-left: 25px;
+            text-shadow: 10px 10px 10px rgb(69, 69, 1);
+            margin-top: -50px;
+
+            /* display: none; */
+        }
+
+        #divTotal_Yesterday {
+            font-size: 3.0vw;
+        }
+
+
+        .section {
+
+            display: inline-flex;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            /* margin-bottom: 10px; */
+            align-items: stretch;
+            width: 100% !important;
+        }
+
+        .energy-block,
+        .net-revenue {
+
+            padding: 20px;
+            border-radius: 10px;
+            align-content: center;
+            place-items: center;
+            text-align-last: center;
+        }
+
+        .energy-block {
+            /* background: #f2f2f2; */
+            border: #cbcbcb 3px solid;
+            color: white;
+            width: 65% !important;
+        }
+
+        .energy-block-a {
+            width: auto !important;
+            display: none;
+
+            align-content: center;
+            border: #e0ffe0 1px dashed;
+            border-radius: 10px;
+            padding: 10px;
+
+
+            height: fit-content;
+            align-self: center;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+
+        }
+
+        .chartBlock {
+            align-content: center;
+            width: 100% !important;
+        }
+
+        .energy-block-today {
+            border: #e0ffe0 3px solid;
+            color: white
+        }
+
+        .net-revenue {
+            /* background: #e0ffe0; */
+            border: #cbcbcb 3px solid;
+            text-align: center;
+            width: 35%;
+            /* width: 800px; */
+        }
+
+        .net-revenue-today {
+            /* background: #e0ffe0; */
+            border: #e0ffe0 3px solid;
+            text-align: center;
+        }
+
+        .section-title {
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 18px;
+            color: white;
+
+        }
+
+        .lastMonthDetailChart {
+            padding-left: 10px;
+        }
+
+        .thisMonthDetailChart {
+            padding-left: 10px;
+        }
+
+        .block-text-energy {
+            text-align: center;
+        }
+    </style>
+
+
+
+    <script>
+
+
+        const testLocalServer = false; // public = false  // @@@
+        const onlineServer = false; // public = true
+
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        let url = "https://tgapps.synology.me:40556";
+
+        if (onlineServer == true) {
+            url = ""; // Local server URL
+        }
+
+        if (testLocalServer == true) {
+            url = "http://127.0.0.1:40555"; // 
+        }
+
+
+        var rainPlugin;
+        var monthlyRainPlugin;
+
+        function rainSettings_Setup() {
+            let countAccount = 1
+            try {
+                let accountSaved = getSavedAccounts();
+                let jsonAccount = JSON.parse(accountSaved);
+                countAccount = jsonAccount.length;
+            }
+            catch (err) {
+                log(err);
+            }
+
+            ///////
+            const rainDrops = [];
+            const dropCount = 100; // How many drops?
+
+            let defaultSpeed = 1.5;
+
+            if (countAccount >= 2)
+                defaultSpeed = 0.5;
+
+            // Initialize drops with random positions
+            for (let i = 0; i < dropCount; i++) {
+                rainDrops.push({
+                    x: Math.random() * 800, // Random X (will be constrained by width later)
+                    y: Math.random() * 400, // Random Y
+                    speed: defaultSpeed + Math.random(), // Random falling speed
+                    length: 10 + Math.random() * 10 // Random drop length
+                });
+            }
+
+            // --- 2. THE CUSTOM PLUGIN ---
+            rainPlugin = {
+                id: 'rainEffect',
+                // 1. Update positions ONCE per frame
+                beforeDraw(chart) {
+                    const { chartArea: { top, bottom, left, width } } = chart;
+
+                    rainDrops.forEach(drop => {
+                        drop.y += drop.speed;
+                        if (drop.y > bottom) {
+                            drop.y = top;
+                            drop.x = left + Math.random() * width;
+                        }
+                    });
+                },
+                // 2. Draw the rain for specific datasets
+                beforeDatasetDraw(chart, args) {
+                    // 'args.index' tells us which dataset is currently being drawn
+                    const datasetIndex = args.index;
+                    const dataset = chart.data.datasets[datasetIndex];
+
+                    // log(dataset.label.);
+
+
+                    // only animate for rain chart
+                    if (dataset.label != 'Rain Today')
+                        return;
+
+                    // CHECK: Is it hidden?
+                    if (chart.getDatasetMeta(datasetIndex).hidden) return;
+
+                    const { ctx, chartArea: { bottom } } = chart;
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    const points = meta.data;
+
+                    ctx.save();
+                    ctx.beginPath();
+
+                    if (points.length > 0) {
+                        ctx.moveTo(points[0].x, points[0].y);
+                        for (let i = 1; i < points.length; i++) {
+                            ctx.lineTo(points[i].x, points[i].y);
+                        }
+                        ctx.lineTo(points[points.length - 1].x, bottom);
+                        ctx.lineTo(points[0].x, bottom);
+                        ctx.closePath();
+                    }
+
+                    ctx.clip(); // Mask the area
+
+                    // Draw rain
+                    ctx.strokeStyle = 'cyan';
+                    ctx.lineWidth = 10;
+
+                    rainDrops.forEach(drop => {
+                        ctx.beginPath();
+                        ctx.moveTo(drop.x, drop.y);
+                        ctx.lineTo(drop.x, drop.y + drop.length);
+                        ctx.stroke();
+                    });
+
+                    ctx.restore();
+                }
+            };
+
+            // --- 3. MONTHLY RAIN PLUGIN ---
+            monthlyRainPlugin = {
+                id: 'monthlyRainEffect',
+                // 1. Update positions ONCE per frame
+                beforeDraw(chart) {
+                    const { chartArea: { top, bottom, left, width } } = chart;
+
+                    rainDrops.forEach(drop => {
+                        drop.y += drop.speed;
+                        if (drop.y > bottom) {
+                            drop.y = top;
+                            drop.x = left + Math.random() * width;
+                        }
+                    });
+                },
+                // 2. Draw the rain for monthly rain dataset
+                beforeDatasetDraw(chart, args) {
+                    const datasetIndex = args.index;
+                    const dataset = chart.data.datasets[datasetIndex];
+
+                    //log("Monthly rain plugin - Dataset label: " + dataset.label);
+
+                    //log(dataset.label);
+
+                    // Only animate for monthly rain chart
+                    if (dataset.label != 'Rain (mm)')
+                        return;
+
+                    //log(dataset.label);
+
+                    // CHECK: Is it hidden?
+                    if (chart.getDatasetMeta(datasetIndex).hidden) return;
+
+                    const { ctx, chartArea: { bottom } } = chart;
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    const points = meta.data;
+
+                    ctx.save();
+                    ctx.beginPath();
+
+                    if (points.length > 0) {
+                        ctx.moveTo(points[0].x, points[0].y);
+                        for (let i = 1; i < points.length; i++) {
+                            ctx.lineTo(points[i].x, points[i].y);
+                        }
+                        ctx.lineTo(points[points.length - 1].x, bottom);
+                        ctx.lineTo(points[0].x, bottom);
+                        ctx.closePath();
+                    }
+
+                    ctx.clip(); // Mask the area
+
+                    // Draw rain
+                    ctx.strokeStyle = 'cyan';  // Cyan with transparency
+                    ctx.lineWidth = 10;
+
+                    rainDrops.forEach(drop => {
+                        ctx.beginPath();
+                        ctx.moveTo(drop.x, drop.y);
+                        ctx.lineTo(drop.x, drop.y + drop.length);
+                        ctx.stroke();
+                    });
+
+                    ctx.restore();
+                }
+            };
+
+        }
+
+        // --- 4. DATA LABELS PLUGIN for Daily Chart (shows values on top of line) ---
+        const dataLabelsPlugin = {
+            id: 'dataLabelsPlugin',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+
+                chart.data.datasets.forEach((dataset, datasetIndex) => {
+                    // Only show labels for "Culmulative Net Revenue" (yAxisID: 'y')
+                    if (dataset.yAxisID !== 'y') return;
+
+                    const meta = chart.getDatasetMeta(datasetIndex);
+                    if (meta.hidden) return;
+
+                    ctx.save();
+                    ctx.font = 'bold 40px Calibri';
+                    ctx.fillStyle = 'yellow';     // text color
+                    ctx.strokeStyle = 'blue';  // border color (black)
+                    ctx.lineWidth = 5;         // border thickness
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.letterSpacing = "10px";  // <--- Add letter spacing here
+
+                    // Add shadow
+                    // ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+                    // ctx.shadowBlur = 8;
+                    // ctx.shadowOffsetX = 3;
+                    // ctx.shadowOffsetY = 1;
+
+                    meta.data.forEach((point, index) => {
+                        // Only show every few points to avoid clutter
+                        if (index % 2 === 0) {
+                            const value = dataset.data[index];
+
+                            // if (index == 0 || index == meta.data.length - 1)
+                            //     return;
+
+                            if (index == 0 || index == meta.data.length - 3)
+                                return;
+
+                            if (value !== null && value !== undefined) {
+                                // Align right for last point to prevent clipping
+
+                                if (index === meta.data.length - 1) // last
+                                {
+                                    ctx.textAlign = 'right';
+                                    ctx.textBaseline = 'bottom';
+                                }
+                                else {
+                                    ctx.textAlign = 'center';
+                                }
+                                // Draw border first, then fill
+                                ctx.strokeText(value.toFixed(0), point.x, point.y - 10);
+                                ctx.fillText(value.toFixed(0), point.x, point.y - 10);
+                            }
+                        }
+                    });
+
+                    ctx.restore();
+                });
+            }
+        };
+
+
+
+        async function getSolarData(apiName, chartType, myusername) {
+
+            return new Promise(async (resolve, reject) => {
+
+                let solarData = await getTGSolarDataSingle(apiName, chartType, myusername);
+                resolve(solarData);
+
+                // let accountSelected = getSavedAccounts(); 
+                // accountSelected = JSON.parse(accountSelected);
+
+                // available_accounts.forEach(async user => 
+                // {
+                //     if(isBlank(accountSelected) == false)
+                //     {
+                //         for(let i = 0; i < accountSelected.length; i++)
+                //         {
+                //             let usernameSelected = accountSelected[i].username;
+
+                //             let solarData = await getTGSolarDataSingle(apiName, chartType, usernameSelected);
+
+                //             log("=====" + usernameSelected + "=====")
+                //             log(solarData);
+
+                //             resolve(solarData);
+                //         }
+                //     }
+                // });
+
+
+
+            });
+
+
+        }
+
+        async function getTGSolarDataSingle(apiName, chartType, usernameSelected) {
+            return new Promise(async (resolve, reject) => {
+                let urlMain = url + '/getTGSolar/' + apiName + "/" + usernameSelected
+                const response = await fetch(url + '/getTGSolar/' + apiName + "/" + usernameSelected);
+
+
+                //log(url + '/getTGSolar/' + apiName + "/" + usernameSelected);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                //console.log("apiName: " + urlMain);
+
+                if (chartType == false) {
+                    const fallbackData = [
+                        { type: "Energy analysis", value: "-", unit: "MWh", data_type: "energy_analysis_map" },
+                        { type: "Production", value: "-", unit: "MWh", data_type: "production_map" },
+                        { type: "Consumption", value: "-", unit: "MWh", data_type: "consumption_map" },
+                        { type: "Net revenue", value: "-", unit: "MYR", data_type: "earning_map" },
+                    ];
+
+                    const contentLength = response.headers.get('content-length');
+                    const data = contentLength && parseInt(contentLength) > 0
+                        ? await response.json()
+                        : fallbackData;
+                    resolve(data);
+                }
+                else {
+                    const contentLength = response.headers.get('content-length');
+                    const data = contentLength && parseInt(contentLength) > 0
+                        ? await response.json()
+                        : "";
+                    resolve(data);
+                }
+
+            });
+        }
+
+        async function getUsernameInfo() {
+            return new Promise(async (resolve, reject) => {
+                let response = await fetch(url + "/getUsernameInfo");
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+            });
+        }
+
+        async function getHistoryRatios() {
+
+            return new Promise(async (resolve, reject) => {
+                let response = await fetch(url + "/getHistoryRatios");
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+            });
+        }
+
+        async function getHistoryMaxPVData() {
+            return new Promise(async (resolve, reject) => {
+                let response = await fetch(url + "/getHistoryMaxPV");
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : [];
+                resolve(data);
+            });
+        }
+
+        async function getDailyData(startDate, endDate, myusername) {
+
+            log("getDailyData from Server");
+
+            return new Promise(async (resolve, reject) => {
+                let response = await fetch(url + '/getDailyDateStart/' + startDate + "/" + myusername);
+
+                if (endDate != null) {
+                    response = await fetch(url + '/getDailyDate/' + startDate + "/" + endDate + "/" + myusername);
+                }
+
+                //log(url + '/getDailyDate/' + startDate + "/" + endDate + "/" + myusername);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+
+            });
+
+        }
+
+
+        async function getAllAccount() {
+
+            log("getAllUsername from Server");
+
+            return new Promise(async (resolve, reject) => {
+
+                let response = await fetch(url + '/getAllUsername');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const contentLength = response.headers.get('content-length');
+                const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
+                resolve(data);
+
+            });
+
+        }
+
+
+        function showProgressDialog() {
+            progressDialog.style.display = "block";
+        }
+
+        function hideProgressDialog() {
+            progressDialog.style.display = "none";
+        }
+
+        function isBlank(val) {
+            if (val != undefined && String(val).trim().length != 0 && val != null && val != 'null')
+                return false;
+            return true;
+        }
+
+
+        let dataHM = new Map();
+
+
+        async function refetchDataAll(accounts) {
+            return new Promise(async (resolve, reject) => {
+                try {
+
+                    let totalToday = 0;
+                    let totalThisMonth = 0;
+                    let totalLastMonth = 0;
+                    let totalYesterday = 0;
+
+                    for (const obj of accounts) {
+                        accountSettings.set("requestRainDataOnce_" + obj.username, false);
+                        //log("test: " + "requestRainDataOnce_" + obj.username);
+
+                        await refetchData(obj.username);
+
+
+                        let getToday = dataHM.get("Today_" + obj.username) || 0;
+                        if (getToday == "-")
+                            getToday = 0;
+
+                        let getThisMonth = dataHM.get("ThisMonth_" + obj.username) || 0;
+                        if (getThisMonth == "-")
+                            getThisMonth = 0;
+
+                        let getLastMonth = dataHM.get("Last Month_" + obj.username) || 0;
+                        if (getLastMonth == "-")
+                            getLastMonth = 0;
+
+                        let getYesterday = dataHM.get("Yesterday_" + obj.username) || 0;
+                        if (getYesterday == "-")
+                            getYesterday = 0;
+
+                        //log(getToday + " | " + getThisMonth + " | " + getLastMonth);
+
+                        if (isBlank(getToday) == false)
+                            totalToday = totalToday + parseFloat(getToday);
+
+                        if (isBlank(getThisMonth) == false)
+                            totalThisMonth = totalThisMonth + parseFloat(getThisMonth);
+
+                        if (isBlank(getLastMonth) == false)
+                            totalLastMonth = totalLastMonth + parseFloat(getLastMonth);
+
+                        if (isBlank(getYesterday) == false)
+                            totalYesterday = totalYesterday + parseFloat(getYesterday);
+                    }
+
+                    $("#divTodayTotal_Today").text(Math.floor(totalToday));
+                    $("#divTodayThisMonth_Today").text(Math.floor(totalThisMonth));
+                    $("#divTodayLastMonth_Today").text(Math.floor(totalLastMonth));
+                    $("#divTotal_Yesterday").text(Math.floor(totalYesterday));
+
+                    // Calculate ratio of 1st account vs 2nd account (daily revenue)
+                    if (accounts.length >= 2) {
+                        let account1Today = parseFloat(dataHM.get("Today_" + accounts[0].username)) || 0;
+                        let account2Today = parseFloat(dataHM.get("Today_" + accounts[1].username)) || 0;
+
+                        let ratio = account2Today > 0 ? (account1Today / account2Today) : 0;
+                        log("Account ratio - " + accounts[0].username + ": " + account1Today + " | " + accounts[1].username + ": " + account2Today + " | Ratio: " + ratio.toFixed(2));
+
+                        // Display the ratio at bottom of page
+                        let footer = document.getElementById("bottomFooterContainer");
+                        if (!footer) {
+                            footer = document.createElement('div');
+                            footer.id = "bottomFooterContainer";
+                            // footer.style.position = 'fixed';
+                            footer.style.bottom = '0';
+                            footer.style.left = '0';
+                            // footer.style.width = '100%';
+                            footer.style.zIndex = '1000';
+                            footer.style.display = 'flex';
+                            footer.style.flexDirection = 'row';
+                            footer.style.justifyContent = 'space-between';
+                            footer.style.alignItems = 'center';
+                            footer.style.padding = '0 50px 10px 50px';
+                            footer.style.pointerEvents = 'none';
+                            document.body.appendChild(footer);
+                        }
+
+                        // Ensure we have placeholders for PV left and right if they don't exist yet
+                        // This keeps the ratio centered even if PV data hasn't arrived
+                        if (!document.getElementById("maxPV_left")) {
+                            let leftPlaceholder = document.createElement('div');
+                            leftPlaceholder.id = "maxPV_left";
+                            leftPlaceholder.style.width = '20%';
+                            leftPlaceholder.style.color = '#88FBE7';
+                            leftPlaceholder.style.fontSize = '1.5vw';
+                            leftPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 3px';
+                            leftPlaceholder.style.fontFamily = 'Courier New';
+                            footer.insertBefore(leftPlaceholder, footer.firstChild);
+                        }
+
+                        let ratioElement = document.getElementById("accountRatio");
+                        if (!ratioElement) {
+                            ratioElement = document.createElement('div');
+                            ratioElement.id = "accountRatio";
+                            ratioElement.style.color = 'white';
+                            ratioElement.style.fontSize = '2vw';
+                            ratioElement.style.fontFamily = 'Courier New';
+                            ratioElement.style.textAlign = 'center';
+                            ratioElement.style.flex = '1';
+                            footer.appendChild(ratioElement);
+                        }
+
+                        if (!document.getElementById("maxPV_right")) {
+                            let rightPlaceholder = document.createElement('div');
+                            rightPlaceholder.id = "maxPV_right";
+                            rightPlaceholder.style.width = '20%';
+                            rightPlaceholder.style.color = '#88FBE7';
+                            rightPlaceholder.style.fontSize = '1.5vw';
+                            rightPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 3px';
+                            rightPlaceholder.style.fontFamily = 'Courier New';
+                            rightPlaceholder.style.textAlign = 'right';
+                            footer.appendChild(rightPlaceholder);
+                        }
+                        ///
+
+                        currentRatio = ratio.toFixed(2);
+
+
+                        ratioElement.innerHTML = `
+    <span class="ratio-label">Ratio:</span> 
+    <span class="val-min">(Min) ${minRatio}</span> 
+    <span class="val-curr">(Live) ${currentRatio}</span> 
+    <span class="val-max">(Max) ${maxRatio}</span>
+`;
+
+                    }
+
+
+                }
+                finally {
+                    // var styleTag = document.createElement('style');
+                    // styleTag.id = 'my-dynamic-style';
+                    // styleTag.textContent = `
+                    //                         #containerMain *:not(canvas) {
+                    //                             width: 100%;
+                    //                         }
+                    //                         `;
+                    // document.head.appendChild(styleTag);
+
+                    //  setTimeout(function() {
+                    //     // Remove the style tag after 5 seconds
+                    //     var styleTag = document.getElementById('my-dynamic-style');
+                    //     if (styleTag) 
+                    //         styleTag.remove();
+                    // }, 500); // 500 milliseconds = 5 seconds
+
+                    startRainAnimation();
+
+
+                    resolve("");
+                }
+
+
+            });
+
+        }
+
+        let firstAccount_LastMonthChart_Size = null;
+        let firstAccount_LastMonthChart_Size_Max = null;
+
+        let firstAccount_ThisMonthChart_Size = null;
+        let firstAccount_ThisMonthChart_Size_Max = null;
+
+        async function refetchData(myusername) {
+
+            var dailyDataDetailValue = null;
+            var thisMonthDataDetailValue = null;
+            var lastMonthDataDetailValue = null;
+
+            try {
+                await sleep(1000); // Simulate loading time
+
+                var todayData = await getSolarData("id_target_today", false, myusername);
+                var yesterdayData = await getSolarData("id_target_yesterday", false, myusername);
+                var lastMonthDataSingleData = await getSolarData("id_target_last_month", false, myusername);
+
+                log("yesterday data");
+                log(yesterdayData);
+
+                log("Last Month Data Single Data")
+                log(lastMonthDataSingleData);
+
+                if (lastMonthDataDetailValue == null || lastMonthDataDetailValue == "") {
+                    //log("lastMonthDataDetailValue is null or empty, fetching detail data...");
+                    lastMonthDataDetailValue = await getSolarData("id_target_last_month_detail", true, myusername);
+
+                    log("last month chart data");
+                    log(lastMonthDataDetailValue);
+                }
+
+                // this month
+                thisMonthDataDetailValue = await getSolarData("id_target_current_month_detail", true, myusername);
+                log("thisMonthDataDetailValue");
+                log(thisMonthDataDetailValue);
+
+                // daily todaydetail
+                let todayDate = moment().format('DDMMYYYY');
+                dailyDataDetailValue = await getDailyData(todayDate, null, myusername);
+
+                if (isBlank(dailyDataDetailValue) == true) {
+                    // daily has no data, do nothing
+                }
+
+                const datasets = [
+                    { label: "Today", data: todayData },
+                    { label: "Yesterday", data: yesterdayData },
+                    { label: "Last Month", data: lastMonthDataSingleData }
+                ];
+
+                log("Today data");
+                log(todayData);
+                log("Yesterday data");
+                log(yesterdayData);
+                log("last month data");
+                log(lastMonthDataSingleData);
+
+                let containerMain = document.getElementById("containerMain");
+
+                if (containerMain == null) {
+                    containerMain = document.createElement('div');
+                    containerMain.id = "containerMain";
+                }
+
+
+                let container = document.getElementById("container_" + myusername);
+
+                //log("container: " + container);              
+
+                if (container == null) {
+                    let mainColor = getColorRemaining();
+                    const gradientString = makeGradientFromMainColor(mainColor);
+
+                    //log(gradientString);
+
+                    container = document.createElement('div');
+                    container.id = "container_" + myusername;
+                    container.className = 'divAccountContainer';
+                    container.style.borderColor = mainColor;
+                    container.style.setProperty('--border-gradient', gradientString);
+                    container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
+                    containerMain.appendChild(container);
+
+                    document.body.appendChild(containerMain);
+                }
+                // else {
+                //     container.innerHTML = '';
+                // }
+
+                log("container ID: " + container.id);
+
+
+                //container.innerHTML = '';            
+
+
+
+                datasets.forEach(section => {
+                    // Create unique ID for section to identify if it exists
+                    const sectionLabelId = section.label.replace(/\s+/g, '');
+                    const sectionId = "section_" + sectionLabelId + "_" + myusername;
+
+                    let sectionDiv = document.getElementById(sectionId);
+                    let isNew = false;
+
+                    if (!sectionDiv) {
+                        isNew = true;
+                        sectionDiv = document.createElement('div');
+                        sectionDiv.id = sectionId;
+                        sectionDiv.className = 'section';
+                    }
+
+                    let energyBlock, energyBlockA, energyBlockB, netRevenue, installType;
+
+                    if (isNew) {
+                        energyBlock = document.createElement('div');
+                        energyBlock.className = 'energy-block';
+
+                        energyBlockA = document.createElement('div');
+                        energyBlockA.className = 'energy-block-a';
+
+                        energyBlockB = document.createElement('div');
+                        energyBlockB.id = "chartBlock" + "_" + myusername;
+                        energyBlockB.className = "chartBlock";
+
+                        netRevenue = document.createElement('div');
+                        netRevenue.className = 'net-revenue';
+                        netRevenue.id = 'divNetRevenue' + "_" + myusername;
+
+                        installType = document.createElement('div');
+                        installTypeExtra = document.createElement('div');
+                    } else {
+                        energyBlock = sectionDiv.querySelector('.energy-block');
+                        energyBlockA = sectionDiv.querySelector('.energy-block-a');
+                        energyBlockB = sectionDiv.querySelector('.chartBlock');
+                        netRevenue = sectionDiv.querySelector('.net-revenue');
+                        // installType is the second to last, installTypeExtra is the last
+                        installType = sectionDiv.children[sectionDiv.children.length - 2];
+                        installTypeExtra = sectionDiv.lastElementChild;
+                    }
+
+                    section.data.forEach(async item => {
+                        if (item.data_type === 'earning_map') {
+                            //log("Test: " + item.value);
+
+                            dataHM.set(section.label + "_" + myusername, item.value);
+
+                            if (section.label === 'Today') {
+                                if (isNew) {
+                                    netRevenue.className = 'net-revenue net-revenue-today';
+                                    energyBlock.className = 'energy-block energy-block-today';
+
+                                    installType.className = "installTypeClass";
+                                    installType.style.position = "absolute";
+                                    installType.style.marginTop = "15px";
+
+                                    installTypeExtra.className = "installTypeExtraClass";
+                                    // installTypeExtra.style.position = "absolute"; // Already in CSS
+                                }
+                                installType.innerHTML = usernamesHM.get(myusername) ? usernamesHM.get(myusername).description : myusername;
+
+                                // Handle description3
+                                let desc3Content = "";
+                                if (usernamesHM.get(myusername) && usernamesHM.get(myusername).description3) {
+                                    try {
+                                        let desc3Json = JSON.parse(usernamesHM.get(myusername).description3);
+                                        // Format as vertical rows
+                                        desc3Content = Object.entries(desc3Json).map(([k, v]) =>
+                                            `<div class="desc-row">
+                                                <span class="desc-key">${k}:</span> 
+                                                <span class="desc-val">${v}</span>
+                                            </div>`
+                                        ).join('');
+                                    } catch (e) {
+                                        // Fallback to raw string if not valid JSON
+                                        desc3Content = `<div class="desc-row desc-val">${usernamesHM.get(myusername).description3}</div>`;
+                                    }
+                                }
+                                installTypeExtra.innerHTML = desc3Content;
+                            }
+
+                            let toDisplay = section.label;
+                            if (section.label === 'Yesterday') {
+                                toDisplay = 'This Month';
+                            }
+
+                            netRevenue.innerHTML = `
+                                ${section.label === 'Today' ? `<div class="live-indicator"><span class="dot2" id="logoSun"></span>Live ${section.label}<span class="accountInfo">&nbsp;&nbsp;${myusername.split("@")[0]}</span></div>` : ""}
+                                <div class='tinyLabelDiv'>${toDisplay} Revenue (${item.unit ? item.unit : "MYR"})</div>
+                                <div style="display:inline-flex; ">${section.label === 'Today' ? "<div id='" + myusername + "_status' class='currentStatusIndicator'></div>" : ""}<div class='mainValueClass' id="mainValueDiv_${section.label}_${myusername}" >${item.value != '-' ? Math.floor(parseFloat(item.value)) : item.value}</div></div><div id="mainValueDiv2_${section.label}_${myusername}" class="mainValueClass2"></div>`;
+
+                            if (section.label === 'Last Month') {
+                                let canvasId = 'lastMonthDetailChart' + "_" + myusername;
+                                let canvas = document.getElementById(canvasId);
+
+                                if (!canvas) {
+                                    canvas = document.createElement('canvas');
+                                    canvas.className = 'lastMonthDetailChart';
+                                    canvas.id = canvasId;
+                                    canvas.height = 600;
+
+                                    let maxChartWidth = ((window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1));
+
+                                    if (firstAccount_LastMonthChart_Size != null) {
+                                        canvas.width = firstAccount_LastMonthChart_Size;
+                                        canvas.style.maxWidth = firstAccount_LastMonthChart_Size_Max;
+                                    }
+                                    else {
+                                        canvas.width = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1);
+                                        canvas.style.maxWidth = maxChartWidth + "px";
+                                    }
+
+                                    if (firstAccount_LastMonthChart_Size == null) {
+                                        firstAccount_LastMonthChart_Size = canvas.width;
+                                        firstAccount_LastMonthChart_Size_Max = canvas.style.maxWidth;
+                                    }
+
+                                    energyBlockB.appendChild(canvas);
+                                }
+
+                                if (isNew) {
+                                    energyBlock.appendChild(energyBlockB);
+                                    energyBlock.style = "display: inline-flex;";
+                                }
+                            }
+                            else if (section.label === 'Yesterday') {
+                                let canvasId = 'thisMonthDetailChart' + "_" + myusername;
+                                let canvas = document.getElementById(canvasId);
+
+                                if (!canvas) {
+                                    canvas = document.createElement('canvas');
+                                    canvas.className = 'thisMonthDetailChart';
+                                    canvas.id = canvasId;
+                                    canvas.height = 600;
+
+                                    let maxChartWidth = ((window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1));
+
+                                    if (firstAccount_ThisMonthChart_Size != null) {
+                                        canvas.width = firstAccount_ThisMonthChart_Size;
+                                        canvas.style.maxWidth = firstAccount_ThisMonthChart_Size_Max;
+                                    }
+                                    else {
+                                        canvas.width = (window.innerWidth - document.getElementById("divNetRevenue" + "_" + myusername).offsetWidth) - (window.innerWidth * 0.1);
+                                        canvas.style.maxWidth = maxChartWidth + "px";
+                                    }
+
+                                    if (firstAccount_ThisMonthChart_Size == null) {
+                                        firstAccount_ThisMonthChart_Size = canvas.width;
+                                        firstAccount_ThisMonthChart_Size_Max = canvas.style.maxWidth;
+                                    }
+                                    energyBlockB.appendChild(canvas);
+                                }
+
+                                if (isNew) {
+                                    energyBlock.appendChild(energyBlockB);
+                                    energyBlock.style = "display: inline-flex;";
+                                }
+                            }
+                            else if (section.label == 'Today') {
+                                let canvasId = 'thisDayDetailChart' + "_" + myusername;
+                                let canvas = document.getElementById(canvasId);
+
+                                if (!canvas) {
+                                    canvas = document.createElement('canvas');
+                                    canvas.className = 'thisDayDetailChart';
+                                    canvas.id = canvasId;
+                                    canvas.width = 0;
+                                    canvas.height = 600;
+                                    energyBlockB.appendChild(canvas);
+                                }
+
+                                if (isNew) {
+                                    energyBlock.appendChild(energyBlockB);
+                                    energyBlock.style = "display: inline-flex;";
+                                }
+                            }
+                        }
+                        else {
+                            if (energyBlockA.children.length == 0) {
+                                const p = document.createElement('p');
+                                p.className = 'block-text-energy';
+                                p.innerHTML = `<strong style='text-transform: uppercase; font-size:12px'>${item.type}</strong><br><span class="energy-block-number">${item.value}</span> ${item.unit}`;
+
+                                let sectionLabel = section.label;
+                                let p2 = document.createElement('p');
+
+                                if (section.label == 'Yesterday') {
+                                    sectionLabel = 'TM';
+                                    p2.innerHTML = `<div style='text-transform: uppercase; font-size:100px;letter-spacing: 5px;'>${sectionLabel}</div>`;
+                                }
+                                else if (section.label == 'Last Month') {
+                                    sectionLabel = 'LM';
+                                    p2.innerHTML = `<div style='text-transform: uppercase; font-size:100px;letter-spacing: 5px;'>${sectionLabel}</div>`;
+                                }
+                                else if (section.label == 'Today') {
+                                    sectionLabel = 'TD';
+                                    p2.innerHTML = `<div style='text-transform: uppercase; font-size:100px;letter-spacing: 5px;'>${sectionLabel}</div>`;
+                                }
+
+                                if (sectionLabel !== section.label) {
+                                    energyBlockA.appendChild(p2);
+                                    energyBlock.appendChild(energyBlockA);
+                                }
+                            }
+                        }
+                    });
+
+                    if (isNew) {
+                        sectionDiv.appendChild(energyBlock);
+                        sectionDiv.appendChild(netRevenue);
+                        sectionDiv.appendChild(installType);
+                        sectionDiv.appendChild(installTypeExtra);
+                        container.appendChild(sectionDiv);
+                    }
+                });
+
+                //
+                // Get the first element with the class
+                const mainValueElement = document.querySelector('.energy-block');
+
+
+                if (lastMonthDataDetailValue != "") {
+                    loadLastMonthDetailChart(lastMonthDataDetailValue, lastMonthDataSingleData, myusername);
+                }
+
+
+                //log("b: " + thisMonthDataDetailValue);
+
+                // Fetch monthly rain data
+                let monthlyRainData = await getMonthlyRainData();
+                log("Monthly rain data fetched for chart:");
+                log(monthlyRainData);
+
+                if (thisMonthDataDetailValue != "") {
+                    loadthisMonthDetailChart(thisMonthDataDetailValue, myusername, monthlyRainData, todayData);
+                }
+                else  // first day of the month
+                {
+                    loadthisMonthDetailChart(thisMonthDataDetailValue, myusername, monthlyRainData);
+                }
+
+
+                if (dailyDataDetailValue != "") {
+                    let jsonData = dailyDataDetailValue.map(item => JSON.parse(item.json));
+                    await loadDailyDayDetailChart(jsonData, todayData, myusername, []);
+                }
+
+
+
+                // Hide the progress dialog after a delay
+
+            }
+            catch (err) {
+                log(err);
+            }
+            finally {
+                //log(available_accounts);
+
+                // Check if the element exists
+                const logoSunElement = document.getElementById('logoSun');
+
+                if (logoSunElement) {
+
+
+                    // this overwrites any listener
+                    logoSunElement.onclick = function () {
+                        const container = document.createElement('div');
+                        container.style.textAlign = 'left';
+
+                        let accountSelected = getSavedAccounts();
+                        if (isBlank(accountSelected) == false) {
+                            accountSelected = JSON.parse(accountSelected);
+                        }
+
+
+                        available_accounts.forEach(user => {
+                            const label = document.createElement('label');
+                            label.style.display = 'block';
+                            label.style.fontSize = '28px'; // Set the font size
+                            label.style.margin = "10px";
+
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.name = 'user_cb';
+                            checkbox.value = user.min_vindex;
+                            checkbox.style.margin = '10px';
+                            checkbox.style.transform = 'scale(1.5)'; // makes checkbox 1.5 times bigger
+
+
+
+                            for (let i = 0; i < accountSelected.length; i++) {
+                                if (user.username == accountSelected[i].username) {
+                                    checkbox.checked = true;
+                                    break;
+                                }
+                            }
+
+                            label.appendChild(checkbox);
+                            label.appendChild(document.createTextNode(' ' + user.username));
+
+                            container.appendChild(label);
+                        });
+
+
+                        container.onchange = function (e) {
+
+                            if (e.target.type === 'checkbox') {
+                                let selectedUsersTemp = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+                                    .map(cb => available_accounts.find(u => u.min_vindex === cb.value));
+
+                                selectedUsers = selectedUsersTemp;
+
+                                saveAccounts();
+                            }
+
+                        };
+
+
+                        // Show dialog
+                        const dialog = new SimpleDialog(container, {
+
+                            //// onClose listener
+                            onClose: async function () {
+                                //alert('Dialog was closed!');
+                                // Or do anything else here (like cleanup, reload, etc)
+
+                                stopRefetchInterval();
+                                showProgressDialog();
+
+
+
+                                let accountSelected = getSavedAccounts();
+                                if (isBlank(accountSelected) == false) {
+                                    accountSelected = JSON.parse(accountSelected);
+                                }
+
+
+                                if (accountSelected.length == 0) {
+                                    if (available_accounts.length != 0) {
+                                        let temp = [];
+                                        temp.push(available_accounts[0]);
+                                        selectedUsers = temp
+                                        saveAccounts();
+
+
+                                        location.reload();
+                                    }
+                                }
+                                else {
+
+
+                                    location.reload();
+                                }
+
+                            }
+                        });
+                        dialog.show();
+                    };
+
+
+                }
+
+                setTimeout(hideProgressDialog, 1000);
+            }
+
+        }
+
+
+
+        function getSelectedURL() {
+            let data = localStorage.getItem('TGSolar_selectedURL');
+            if (isBlank(data) == true) {
+                ///
+            }
+            else {
+                if (window.location.pathname != data) {
+                    window.location.href = data;
+                }
+            }
+
+        }
+
+        function setSelectedURL(url) {
+            localStorage.setItem('TGSolar_selectedURL', url);
+        }
+
+
+        function saveAccounts() {
+            localStorage.setItem('TGSolar_selectedUsers', JSON.stringify(selectedUsers));
+        }
+
+        function getSavedAccounts() {
+            let data = localStorage.getItem('TGSolar_selectedUsers');
+            if (isBlank(data) == false) {
+                data = JSON.parse(data);
+                data.sort((a, b) => a.username.localeCompare(b.username));
+                return JSON.stringify(data);
+            }
+            else {
+                return "[]";
+            }
+
+
+
+        }
+
+
+        var available_accounts = [];
+
+        function log(message) {
+            console.log(message);
+        }
+
+        function toNumber(str) {
+            return parseFloat(str.replace(/,/g, ''));
+        }
+
+        function formatDate(dateStr) {
+            const dateParts = dateStr.split('/');
+            const day = dateParts[0];
+            const month = dateParts[1].slice(0, 3); // e.g., "Jun"
+            const year = dateParts[2];
+
+            // Convert month name to number
+            const monthMap = {
+                Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
+                Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+            };
+            const monthNum = monthMap[month];
+
+            // Get last two digits of year
+            const shortYear = year.slice(-2);
+
+            //return `${day}/${monthNum}/${shortYear}`;
+            return `${day}`;
+        }
+
+
+        let isAnimating = false;  // Flag to prevent multiple animation loops
+
+        function animateRain() {
+            // Update daily charts
+            for (const [key, chartEach] of thisDayDailyDataDetailChat_Map) {
+                if (chartEach) {
+                    // Only update if not hovering (to prevent tooltip lag)
+                    if (!chartEach.tooltip || !chartEach.tooltip.getActiveElements().length) {
+                        chartEach.update('none');
+                    }
+                }
+            }
+
+            // Update monthly charts for rain animation
+            for (const [key, chartEach] of thisMonthDataDetailChat_Map) {
+                if (chartEach) {
+                    // Only update if not hovering (to prevent tooltip lag)
+                    if (!chartEach.tooltip || !chartEach.tooltip.getActiveElements().length) {
+                        chartEach.update('none');
+                    }
+                }
+            }
+
+            if (isAnimating) {
+                requestAnimationFrame(animateRain);
+            }
+        }
+
+        function startRainAnimation() {
+            if (!isAnimating) {
+                isAnimating = true;
+                animateRain();
+            }
+        }
+
+        function stopRainAnimation() {
+            isAnimating = false;
+        }
+
+
+        var lastMonthDataDetailChat_Map = new Map();
+
+        function loadLastMonthDetailChart(rawData, lastMonthDataSingleData, myusername) {
+            var lastMonthDataDetailChat = lastMonthDataDetailChat_Map.get(myusername);
+
+            if (lastMonthDataDetailChat == null)
+                lastMonthDataDetailChat_Map.set(myusername, lastMonthDataDetailChat);
+
+
+            const labels = rawData.map(item => formatDate(item.time));
+            const netRevenue = rawData.map(item => item.netRevenue);
+
+            // sum the each netRevenue
+            const totalNetRevenue = rawData
+                .map(item => Number(item.netRevenue) || 0)
+                .reduce((sum, value) => sum + value, 0);
+
+
+
+
+            if (lastMonthDataSingleData[3].value == null) // null means it has no revenue from the server
+            {
+                // manually
+                if (manualFixData == true) {
+                    document.getElementById("mainValueDiv_Last Month_" + myusername).innerText = Math.floor(totalNetRevenue);
+                    dataHM.set("Last Month_" + myusername, Math.floor(totalNetRevenue));
+                }
+            }
+
+
+            // Chart.js chartSetup
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Net Revenue (MYR)',
+                        data: netRevenue,
+                        borderColor: 'white', // Hex color
+                        backgroundColor: 'yellow', // RGBA for transparency
+                        tension: 0.2,
+                        // borderWidth: 10
+                    }
+                    // ,
+                    // {
+                    //     label: 'Purchased Energy',
+                    //     data: purchased,
+                    //     borderColor: 'rgb(54, 162, 235)',
+                    //     backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    //     tension: 0.2
+                    // },
+                    // {
+                    //     label: 'Load',
+                    //     data: load,
+                    //     borderColor: 'rgb(255, 99, 132)',
+                    //     backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    //     tension: 0.2
+                    // }
+                ]
+            };
+
+            const chartSetup = {
+                type: 'bar',
+                data: data,
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            align: 'center',
+                            display: true,
+                            // text: 'Net Revenue for Last Month',
+                            color: '#FFECA1' // X-axis tick labels
+                        },
+                        legend: {
+                            display: false,
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: 'white',
+                                font:
+                                {
+                                    size: 30,
+                                    family: 'Courier New',
+                                    color: 'white' // X-axis tick labels
+                                },
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.2)', // Grid line color
+                                drawBorder: false,
+                            }
+                        },
+                        y: {
+                            ticks:
+                            {
+                                color: 'white',
+                                font:
+                                {
+                                    size: 50,
+                                    family: 'Courier New',  // 👈 Your custom font
+
+                                },
+                                stepSize: 30,
+                                callback: function (value) {
+                                    return "RM" + value;
+                                }
+                            },
+                            grid:
+                            {
+                                color: 'rgba(255,255,255,0.2)', // Grid line color
+                                drawBorder: false,
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Render chart
+            // Render chart
+            if (lastMonthDataDetailChat) {
+                lastMonthDataDetailChat.data = data;
+                lastMonthDataDetailChat.update('none');
+            } else {
+                const ctx = document.getElementById('lastMonthDetailChart' + "_" + myusername);
+                if (ctx) {
+                    lastMonthDataDetailChat = new Chart(ctx, chartSetup);
+                    lastMonthDataDetailChat_Map.set(myusername, lastMonthDataDetailChat);
+                }
+            }
+        }
+
+
+        function getDaysOfMonth(month, year) {
+            // month: 1-12 (January is 1)
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthIndex = month - 1; // Convert to 0-based for Date
+
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            const formattedDates = [];
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dd = String(day).padStart(2, "0");
+                const mmm = monthNames[monthIndex];
+                formattedDates.push(`${dd}/${mmm}/${year}`);
+            }
+            return formattedDates;
+        }
+
+        // Example usage
+        //console.log(getDaysOfMonth(6, 2024)); // June 2024
+
+
+        var thisMonthDataDetailChat_Map = new Map();
+
+        function loadthisMonthDetailChart(rawData, myusername, monthlyRainData = null) {
+
+            var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
+
+            if (thisMonthDataDetailChat == null)
+                thisMonthDataDetailChat_Map.set(myusername, thisMonthDataDetailChat);
+
+
+            if (rawData == "")
+                rawData = [];
+
+
+
+            //log("loadthisMonthDetailChart");
+            //log(rawData);
+
+            try {
+                let todayDateTemp_Month = moment().format('MM');
+                let todayDateTemp_Year = moment().format('YYYY');
+                let thisMonthDataBlank = getDaysOfMonth(todayDateTemp_Month, todayDateTemp_Year);
+
+
+                // push today's data into this month data
+                {
+                    let obj = new Object();
+                    obj.time = moment().format('DD/MMM/YYYY');
+                    obj.netRevenue = dataHM.get("Today_" + myusername);
+
+                    rawData.push(obj);
+                }
+
+
+                const labels = rawData.map(item => formatDate(item.time));
+
+                //log("labels: " + labels);
+
+
+                const netRevenue = rawData.map(item => item.netRevenue);
+
+                let totalRevenueThisMonth = 0;
+
+                for (let i = 0; i < netRevenue.length; i++) {
+                    //  log("netRevenue[i]: " + netRevenue[i]);
+                    totalRevenueThisMonth = totalRevenueThisMonth + netRevenue[i];
+                }
+
+
+
+
+
+                let totalRevenueThisMonthAndCurrent = (totalRevenueThisMonth);
+                log("totalRevenueThisMonth | " + myusername + " | " + totalRevenueThisMonthAndCurrent);
+
+                // this month
+                let valueYesterday = Math.floor(totalRevenueThisMonthAndCurrent);
+                document.getElementById("mainValueDiv_Yesterday_" + myusername).innerText = (valueYesterday || "-");
+                log("valueYesterday | " + myusername + " | " + valueYesterday);
+                dataHM.set("ThisMonth_" + myusername, valueYesterday);
+
+
+                /// yesterday
+                let valueToday = Math.floor(dataHM.get("Yesterday" + "_" + myusername));
+                document.getElementById("mainValueDiv2_Today_" + myusername).innerText = (valueToday || "-");
+
+
+                // log("Test 1: " + valueYesterday + " | " + totalRevenueThisMonth + " | " + valueToday);
+
+
+
+                //log(dataHM);
+
+                // Transform monthly rain data from object to array
+                let rainDataArray = [];
+                if (monthlyRainData && Object.keys(monthlyRainData).length > 0) {
+                    log("Processing monthly rain data:");
+                    log(monthlyRainData);
+
+                    // For each day in rawData, get corresponding rain value
+                    rainDataArray = rawData.map(item => {
+                        let dayNumber = formatDate(item.time); // Returns "01", "02", etc.
+                        let dayKey = String(parseInt(dayNumber)); // Convert "01" to "1"
+                        let rainValue = monthlyRainData[dayKey] || 0;
+                        return rainValue;
+                    });
+
+
+                    rainDataArray = processArray_RainData(rainDataArray);
+
+
+                }
+
+                //  document.getElementById("mainValueDiv_Yesterday").style = "color: #07FFB8";
+                //  document.getElementById("mainValueDiv_Last Month").style = "color: yellow";
+                //   document.getElementById("mainValueDiv2_Today").style = "color: rgb(221 113 74); padding-left: 50px;";
+
+
+
+
+                // Chart.js chartSetup
+                const data = {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Net Revenue (MYR)',
+                            data: netRevenue,
+                            // borderWidth: 10,
+                            borderColor: 'white', // Hex color
+                            backgroundColor: 'rgba(147, 88, 255, 1)', // use RGBA for transparency
+                            tension: 0.2,
+                            yAxisID: 'y',
+                            order: 2
+                        }
+                    ]
+                };
+
+                // Add rain dataset if data is available
+                if (rainDataArray.length > 0) {
+                    data.datasets.push({
+                        label: 'Rain (mm)',
+                        data: rainDataArray,
+                        borderColor: 'rgba(0, 255, 253, 0.5)',
+                        backgroundColor: 'rgba(22, 100, 100, 0.5)',
+                        type: 'line',                // Line chart overlay
+                        tension: 0.3,
+                        yAxisID: 'y-rain',           // Secondary Y-axis
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        borderWidth: 2,
+                        order: 1,
+                        beginAtZero: true,
+                        borderWidth: 15, // thickness of the line: default is 3
+                    });
+                }
+
+                const chartSetup = {
+                    type: 'bar',
+                    data: data,
+                    plugins: [monthlyRainPlugin],  // Register the plugin HERE in the plugins array
+                    options: {
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        plugins: {
+                            // This section is for plugin OPTIONS, not registration
+                            title: {
+                                align: 'center',
+                                display: true,
+                                //  text: 'Net Revenue for This Month',
+                                color: '#FFECA1' // X-axis tick labels
+                            },
+                            legend: {
+                                display: false,
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: 'white',
+                                    font:
+                                    {
+                                        size: 30,
+                                        family: 'Courier New',  // 👈 Your custom font
+
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255,255,255,0.2)', // Grid line color
+                                    drawBorder: false,
+                                }
+                            },
+                            y: {
+                                position: 'left',  // Primary Y-axis on left
+                                ticks:
+                                {
+                                    color: 'rgba(178, 137, 255, 1)',
+                                    font:
+                                    {
+                                        size: 50,
+                                        family: 'Courier New',  // 👈 Your custom font
+
+                                    },
+                                    stepSize: 50,
+                                    callback: function (value) {
+                                        return "RM" + value;
+                                    }
+
+                                },
+                                grid: {
+                                    color: 'rgba(255,255,255,0.2)', // Grid line color
+                                    drawBorder: false,
+                                }
+                            },
+                            'y-rain': {
+                                type: 'linear',
+                                position: 'left',  // Secondary Y-axis on right
+                                ticks: {
+                                    color: '#00D4FF',  // Cyan color for rain
+                                    font: {
+                                        size: 50,
+                                        family: 'Courier New'
+                                    },
+                                    maxTicksLimit: 5,
+                                    display: true,
+                                    beginAtZero: true,
+                                    padding: 5,
+                                    offset: true,
+                                    callback: function (value) {
+                                        return value + "mm";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // Render chart
+                // Render chart
+                if (thisMonthDataDetailChat) {
+                    thisMonthDataDetailChat.data = data;
+                    thisMonthDataDetailChat.update('none');
+                } else {
+                    const ctx = document.getElementById('thisMonthDetailChart' + "_" + myusername);
+                    if (ctx) {
+                        thisMonthDataDetailChat = new Chart(ctx, chartSetup);
+                        thisMonthDataDetailChat_Map.set(myusername, thisMonthDataDetailChat);
+                    }
+                }
+            }
+            catch (err) {
+                log(err);
+            }
+
+
+        }
+
+        function getHour(timeStr) {
+            // "06:25" => "06:00"
+            return timeStr.slice(0, 2) + ":00";
+        }
+
+        function aggregateHourly(data) {
+            const hourly = {};
+
+            data.forEach(entry => {
+                const hour = getHour(entry.time);
+
+                if (!hourly[hour]) {
+                    // Initialize sums and last cumulativeRM
+                    hourly[hour] = {
+                        time: hour,
+                        pv: 0,
+                        grid: 0,
+                        load: 0,
+                        energyKWh: 0,
+                        savingsRM: 0,
+                        cumulativeRM: entry.cumulativeRM // will be overwritten by last in hour
+                    };
+                }
+
+                hourly[hour].pv += entry.pv;
+                hourly[hour].grid += entry.grid;
+                hourly[hour].load += entry.load;
+                hourly[hour].energyKWh += entry.energyKWh;
+                hourly[hour].savingsRM += entry.savingsRM;
+                hourly[hour].cumulativeRM = entry.cumulativeRM; // last value in hour
+            });
+
+            // Convert object to array
+            return Object.values(hourly);
+        }
+
+
+        function aggregateHourlyNew(data) {
+            // 1. Sort data by time just in case
+            data = [...data].sort((a, b) => a.time.localeCompare(b.time));
+
+            // 2. Find the range of times
+            let times = data.map(entry => entry.time);
+
+            // Helper to convert "HH:MM" to minutes
+            function toMinutes(str) {
+                let [h, m] = str.split(':').map(Number);
+                return h * 60 + m;
+            }
+
+            // Find the first data time and create binning schedule
+            let startTime = data[0].time;
+            let currHour = Number(startTime.slice(0, 2));
+            // Edge case: if the very first is exactly on the HH:00, skip that hour
+            if (startTime.endsWith(":00")) {
+                currHour++;
+            } else {
+                currHour++;
+            }
+            let currMinute = 0;
+
+            // Get the final full hour for the data
+            let lastDataMin = toMinutes(data[data.length - 1].time);
+            let endHour = Number(data[data.length - 1].time.slice(0, 2));
+            if (Number(data[data.length - 1].time.slice(3, 5)) > 0) endHour++;
+
+            let results = [];
+
+            while (currHour <= endHour) {
+                // Define bin boundaries
+                let binStart = toMinutes(String(currHour - 1).padStart(2, '0') + ":01");
+                let binEnd = toMinutes(String(currHour).padStart(2, '0') + ":00");
+
+                // Filter entries in this bin
+                let binEntries = data.filter(entry => {
+                    let min = toMinutes(entry.time);
+                    return min >= binStart && min <= binEnd;
+                });
+
+                if (binEntries.length > 0) {
+                    let agg = {
+                        time: String(currHour).padStart(2, '0') + ':00',
+                        pv: 0,
+                        grid: 0,
+                        load: 0,
+                        energyKWh: 0,
+                        savingsRM: 0,
+                        cumulativeRM: binEntries[binEntries.length - 1].cumulativeRM
+                    };
+                    for (let entry of binEntries) {
+                        agg.pv += entry.pv;
+                        agg.grid += entry.grid;
+                        agg.load += entry.load;
+                        agg.energyKWh += entry.energyKWh;
+                        agg.savingsRM += entry.savingsRM;
+                    }
+                    results.push(agg);
+                }
+                currHour++;
+            }
+            return results;
+        }
+
+        //////////////////////
+
+
+        function aggregateByIntervalV2(data, binSizeMinutes = 60) {
+            // Sort data by time
+            data = [...data].sort((a, b) => a.time.localeCompare(b.time));
+            if (data.length === 0) return [];
+
+            // Helpers
+            function toMinutes(str) {
+                let [h, m] = str.split(':').map(Number);
+                return h * 60 + m;
+            }
+            function fromMinutes(min) {
+                let h = Math.floor(min / 60);
+                let m = min % 60;
+                return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+            }
+
+            // Start from first time in data
+            let firstMin = toMinutes(data[0].time);
+
+            // Find the first bin end (the first "00", "30", etc. strictly after the first data point)
+            let binEnd = Math.ceil(firstMin / binSizeMinutes) * binSizeMinutes;
+            // (Edge-case: If start is exactly on bin boundary (":00", ":30"), should skip that? Original does.)
+
+            if (firstMin % binSizeMinutes === 0) {
+                binEnd += binSizeMinutes;
+            }
+
+            // Define bins: Each bin is (previous_bin_end - binSizeMinutes + 1) ... (binEnd) inclusive
+            let results = [];
+            let lastCumRM = 0;
+            while (binEnd <= toMinutes(data[data.length - 1].time) + binSizeMinutes) {
+                let binStart = binEnd - binSizeMinutes + 1;
+                // "00:01" to "01:00", "01:01" to "02:00", etc
+
+                // Filter entries in this bin (inclusive boundaries)
+                let binEntries = data.filter(entry => {
+                    let min = toMinutes(entry.time);
+                    return min >= binStart && min <= binEnd;
+                });
+
+                if (binEntries.length > 0) {
+                    let agg = {
+                        time: fromMinutes(binEnd),    // Use the bin END as the label as original (e.g. "09:00")
+                        pv: 0,
+                        grid: 0,
+                        load: 0,
+                        energyKWh: 0,
+                        savingsRM: 0,
+                        cumulativeRM: binEntries[binEntries.length - 1].cumulativeRM
+                    };
+                    for (let entry of binEntries) {
+                        agg.pv += entry.pv;
+                        agg.grid += entry.grid;
+                        agg.load += entry.load;
+                        agg.energyKWh += entry.energyKWh;
+                        agg.savingsRM += entry.savingsRM;
+                    }
+
+                    // Average the power values (W) over the interval
+                    if (binEntries.length > 0) {
+                        agg.pv /= binEntries.length;
+                        agg.grid /= binEntries.length;
+                        agg.load /= binEntries.length;
+                    }
+
+                    results.push(agg);
+                }
+                binEnd += binSizeMinutes;
+            }
+
+            return results;
+        }
+
+
+        function recalculateSavings(data, tariffRate = 0.37) {
+            let dataReturn = [];
+
+            let cumulative = 0;
+            const intervalHours = 5 / 60; // 5 minutes in hours
+
+            dataReturn = data.map((item, idx) => {
+                // Calculate PV energy for this interval (kWh)
+                const energyKWh = item.pv * intervalHours / 1000;
+                // Calculate savings for this interval
+                const savingsRM = energyKWh * tariffRate;
+                // Update cumulative
+                cumulative = cumulative + savingsRM;
+
+                return {
+                    ...item,
+                    energyKWh: +energyKWh, // update energyKWh
+                    savingsRM,
+                    cumulativeRM: cumulative,
+                };
+            });
+
+            return dataReturn;
+        }
+
+
+
+        function calculateCumulativeRM_Daily(data, ratePerKWh = 0.37, intervalMinutes = 5) {
+            let cumulativeRM = 0;
+            const results = [];
+
+            data.forEach((entry, index) => {
+
+                const pvW = entry.pv ?? 0;
+                const grid = entry.grid ?? 0;
+                const load = entry.load ?? 0;
+
+                const energyKWh = (pvW / 1000) * (intervalMinutes / 60); // Convert to kWh
+                const savingsRM = energyKWh * ratePerKWh;
+
+                // Round to nearest sen (0.01)
+                const roundedRM = Math.floor(savingsRM * 100) / 100;
+
+                // Only add real RM value (0.01 and above)
+                cumulativeRM += roundedRM;
+
+                results.push({
+                    time: entry.time,
+                    pv: entry.pv || 0,
+                    grid: entry.grid || 0,
+                    load: entry.load || 0,
+                    energyKWh: energyKWh || 0,
+                    savingsRM: roundedRM || 0,
+                    cumulativeRM: cumulativeRM || 0
+                });
+            });
+
+            return results;
+        }
+
+        //
+
+        function compareTimes(t1, t2) {
+            const [h1, m1] = t1.split(':').map(Number);
+            const [h2, m2] = t2.split(':').map(Number);
+            if (h1 > h2 || (h1 === h2 && m1 > m2)) return 1;    // t1 is after t2
+            if (h1 < h2 || (h1 === h2 && m1 < m2)) return -1;   // t1 is before t2
+            return 0;                                           // equal
+        }
+
+        function getRainData() {
+
+            return new Promise(async (resolve, reject) => {
+                try {
+                    let response = await fetch("https://tgapps.synology.me:9234/api/data/getRainDataToday/63");
+                    const data = await response.json();
+                    resolve(data);
+                }
+                catch (err) {
+                    log(err);
+                }
+            });
+        }
+
+        function getMonthlyRainData() {
+            return new Promise(async (resolve, reject) => {
+                try {
+                    // Get current month and year
+                    let currentMonth = moment().format('MM');  // e.g., "12"
+                    let currentYear = moment().format('YYYY'); // e.g., "2025"
+
+                    // Build URL with dynamic month/year
+                    let apiUrl = `https://tgapps.synology.me:9234/api/data/getFastRainDataByMonthYear/${currentMonth}/${currentYear}/63`;
+
+                    log("Fetching monthly rain data from: " + apiUrl);
+
+                    let response = await fetch(apiUrl);
+                    const data = await response.json();
+                    resolve(data);
+                }
+                catch (err) {
+                    log("Error fetching monthly rain data:");
+                    log(err);
+                    resolve([]); // Return empty array on error
+                }
+            });
+        }
+
+        function parseDateTimeRain(str) {
+            // "28/11/2025 06:00"
+            const [d, m, yAndTime] = str.split("/");
+            const [y, time] = yAndTime.split(" ");
+            return new Date(`${y}-${m}-${d}T${time}:00`);
+        }
+
+        function processArray_RainData(data) {
+            // Create a copy to avoid mutating original
+            const arr = [...data];
+
+            // Phase 1: Handle leading zeros
+            // If the array starts with zeros, we treat the start as a "gap" 
+            // and nullify everything up until the zero right before the first non-zero value.
+            let firstNonZeroIndex = -1;
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i] !== 0 && arr[i] !== null) {
+                    firstNonZeroIndex = i;
+                    break;
+                }
+            }
+
+            if (firstNonZeroIndex === -1) {
+                // Case: Array is all zeros (e.g., [0, 0]) -> [null, null]
+                // Since no non-zero value exists to anchor a neighbor, we nullify everything.
+                return arr.fill(null);
+            }
+
+            if (firstNonZeroIndex > 1) {
+                // We have a non-zero value later in the array, and enough zeros before it.
+                // Keep arr[firstNonZeroIndex - 1] as 0.
+                // Nullify everything before that.
+                for (let k = 0; k <= firstNonZeroIndex - 2; k++) {
+                    arr[k] = null;
+                }
+            }
+
+            // Phase 2: Handle zeros between non-zero values (Original Logic)
+            for (let i = 0; i < arr.length; i++) {
+                // 1. Find a value that is not zero (and not null)
+                if (arr[i] !== 0 && arr[i] !== null) {
+
+                    // 2. Check if the NEXT TWO values exist and are zero
+                    if (i + 2 < arr.length && arr[i + 1] === 0 && arr[i + 2] === 0) {
+
+                        // Condition Met. Now find the stopping point (next non-zero)
+                        let nextNonZeroIndex = -1;
+
+                        // Look ahead starting after the current non-zero
+                        for (let j = i + 1; j < arr.length; j++) {
+                            if (arr[j] !== 0 && arr[j] !== null) {
+                                nextNonZeroIndex = j;
+                                break;
+                            }
+                        }
+
+                        let stopNullingAt;
+
+                        if (nextNonZeroIndex !== -1) {
+                            // Found another non-zero value.
+                            // Rule: "prior to it must be 0 too".
+                            // So we must stop nulling at (nextNonZeroIndex - 2), leaving index (nextNonZeroIndex - 1) as 0.
+                            stopNullingAt = nextNonZeroIndex - 2;
+                        } else {
+                            // No other non-zero value found (End of array).
+                            // We nullify everything until the end.
+                            stopNullingAt = arr.length - 1;
+                        }
+
+                        // 3. Apply nulls
+                        // Start at i+2 (keeping i+1 as the '0' after the first value)
+                        for (let k = i + 2; k <= stopNullingAt; k++) {
+                            arr[k] = null;
+                        }
+
+                        // Optimization: Move our main loop index 'i' forward
+                        // If we found a next value, we can jump to it (minus 1, because loop does i++)
+                        if (nextNonZeroIndex !== -1) {
+                            i = nextNonZeroIndex - 1;
+                        } else {
+                            // If we filled to the end, we are done
+                            break;
+                        }
+                    }
+                }
+            }
+            return arr;
+        }
+
+
+        var thisDayDailyDataDetailChat_Map = new Map();
+        const accountSettings = new Map();
+
+        // daily load at the last
+        async function loadDailyDayDetailChart(rawData, todayData, myusername, rainSums) {
+
+
+            var thisDayDailyDataDetailChat = thisDayDailyDataDetailChat_Map.get(myusername);
+
+            if (thisDayDailyDataDetailChat == null)
+                thisDayDailyDataDetailChat_Map.set(myusername, thisDayDailyDataDetailChat);
+
+
+            //log(rawData);
+            rawData = recalculateSavings(rawData);
+            // let rawDataHourly = aggregateHourlyNew(rawData);
+
+            let rawDataHourly = aggregateByIntervalV2(rawData, 30); //
+
+            log("savings: " + myusername);
+            //log(rawData);
+            //log(rawDataHourly);
+
+
+            //// start exactly at the first pv > 0, keep the one entry just before it: eg, 0 ,1, 6,8 10...
+            let firstPVIndex = rawDataHourly.findIndex(item => item.pv > 0);
+            let startIndex = Math.max(firstPVIndex - 1, 0);
+            rawDataHourly = rawDataHourly.slice(startIndex);
+            ////
+
+            log("today data (hour)");
+            log(rawDataHourly);
+
+            // Calculate average revenue per hour
+            let totalSavings = rawDataHourly.reduce((sum, item) => sum + item.savingsRM, 0);
+            let hoursOfData = rawDataHourly.length * 0.5;  // Each entry is 30 min
+            log("hoursOfData: " + hoursOfData + " | " + rawDataHourly.length);
+            let avgRevenuePerHour = hoursOfData > 0 ? (totalSavings / hoursOfData) : 0;
+            log("Average revenue per hour: " + avgRevenuePerHour.toFixed(2) + " RM/hour" + " | " + hoursOfData);
+
+            // Display average revenue per hour
+            let avgRevenueElement = document.getElementById("avgRevenue_" + myusername);
+            if (!avgRevenueElement) {
+                avgRevenueElement = document.createElement('div');
+                avgRevenueElement.id = "avgRevenue_" + myusername;
+                avgRevenueElement.style.color = '#00D4FF';
+                avgRevenueElement.style.fontSize = '1.5vw';
+                avgRevenueElement.style.marginTop = '10px';
+                avgRevenueElement.style.fontFamily = 'Courier New';
+                let netRevenueDiv = document.getElementById("divNetRevenue_" + myusername);
+                if (netRevenueDiv) {
+                    netRevenueDiv.appendChild(avgRevenueElement);
+                }
+            }
+            avgRevenueElement.innerHTML = "Avg RM<b>" + avgRevenuePerHour.toFixed(2) + "</b>/hr";
+
+            let todayDate = moment().format('DD/MM/YYYY');
+            let todayTime = moment().format('HH:mm');
+
+            const labels = rawDataHourly.map(item => (todayDate + " " + item.time));
+            const savingsRM = rawDataHourly.map(item => item.savingsRM);
+            const pvData = rawDataHourly.map(item => item.pv); //
+
+            const pvDataRaw = rawData.map(item => item.pv); // 5 minutes
+
+            //log("pvData");
+            //log(pvData);
+
+            let requestRainDataOnce = accountSettings.get("requestRainDataOnce_" + myusername);
+            //log("requestRainDataOnce: " + requestRainDataOnce + " =========================== " + myusername);
+            if (requestRainDataOnce == false || requestRainDataOnce == undefined) {
+                accountSettings.set("requestRainDataOnce_" + myusername, true);
+
+                new Promise(async (resolve) => {
+                    try {
+                        await sleep(1000);
+                        let rainData = await getRainData();
+
+                        log("rain today - " + myusername);
+                        log(rainData);
+
+
+
+                        // Convert interval strings to objects with start/end times
+                        let intervals = labels.map((dateStr, idx, arr) => {
+                            let start = parseDateTimeRain(dateStr);
+                            // End is next interval's start or +30mins if last
+                            let end;
+                            if (idx < arr.length - 1) {
+                                end = parseDateTimeRain(arr[idx + 1]);
+                            } else {
+                                end = new Date(start.getTime() + 30 * 60000);
+                            }
+                            return { start, end };
+                        });
+
+                        // For each interval, sum rainData.value where systemdate is inside interval
+                        let rainSums = intervals.map(({ start, end }) => {
+                            let total = 0;
+                            for (const item of rainData) {
+                                const d = new Date(item.systemdate);
+                                if (d >= start && d < end) {
+                                    total += item.value;
+                                }
+                            }
+                            return total; // Or null/0 if you want to highlight intervals with no data
+                        });
+
+                        //log(rainSums);
+
+                        rainSums = processArray_RainData(rainSums);
+
+                        //log(rainSums);
+
+                        await loadDailyDayDetailChart(rawData, todayData, myusername, rainSums);
+                    }
+                    finally {
+                        resolve("");
+                    }
+                });
+            }
+
+
+
+
+
+            //log(rawDataHourly[rawDataHourly.length-1].time + " | " + todayTime);
+
+            //log(labels);
+
+
+            // means time now is ahead of data, but havent recorded yet, so we adjust it // @@@
+
+            {
+                // log("yeay, time now is ahead")
+                let latestPV_Data = pvData[pvData.length - 1];
+                let previousPV_Data = pvData[pvData.length - 2] || 0;
+
+                if (latestPV_Data < previousPV_Data)  //if latest data is lower than previous, we adjust it up by 10%
+                {
+                    let previousPV_Data_add10Percent = previousPV_Data + (previousPV_Data * 0.05);
+                    pvData[pvData.length - 1] = previousPV_Data_add10Percent;
+
+                }
+
+
+            }
+            //log(pvDataRaw);
+
+            ///////// determine trend, bearish or bullish
+            let dataToDetermine = pvDataRaw;
+            const lenTrend = dataToDetermine.length;
+            let status = 'no change';
+
+            if (lenTrend >= 2) {
+                if (dataToDetermine[lenTrend - 1] > dataToDetermine[lenTrend - 2]) {
+                    status = 'up';
+                } else if (dataToDetermine[lenTrend - 1] < dataToDetermine[lenTrend - 2]) {
+                    status = 'down';
+                }
+            } else {
+                status = 'not enough data';
+            }
+            ///
+
+            if (status == 'no change' || status == 'not enough data') {
+                // do nothing, keep previous status
+                document.getElementById(myusername + "_status").innerHTML = "↔";
+                document.getElementById(myusername + "_status").className = "currentStatusIndicator status-sideways blinkTrend";
+
+            }
+            else {
+                if (status == 'up') {
+                    document.getElementById(myusername + "_status").innerHTML = "⬆";
+                    document.getElementById(myusername + "_status").className = "currentStatusIndicator status-up blinkTrend ";
+                }
+                else {
+                    document.getElementById(myusername + "_status").innerHTML = "⬇";
+                    document.getElementById(myusername + "_status").className = "currentStatusIndicator status-down blinkTrend";
+                }
+            }
+            ///////////
+
+
+
+            // manually calculate culmulative savings
+            let cumulative = 0;
+            const netRevenue = savingsRM.map(value => {
+                cumulative += parseFloat(value); // ensure it's number
+                return parseFloat(cumulative.toFixed(2)); // round to 2 decimal
+            });
+
+            log("cumulative (today): " + cumulative + " | " + myusername); // display today (manually)
+
+
+            // account 2 (other than the account 1)
+            if (todayData[3].value == null && manualFixData == true) // null means it has no revenue from the server
+            {
+                log("manually set today");
+
+                document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText = Math.floor(cumulative);
+
+                dataHM.set("Today_" + myusername, Math.floor(cumulative));
+
+                var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
+
+                /// get data from chart manually
+                let currentIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 1; // get yesterday
+                let yesterdayIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 2; // get 2 days ago
+                let yesterdayDataTemp = thisMonthDataDetailChat.data.datasets[0].data[yesterdayIndexTemp];
+                log("yesterdayDataTemp: " + yesterdayDataTemp);
+
+                document.getElementById("mainValueDiv2_Today" + "_" + myusername).innerText = Math.floor(yesterdayDataTemp) || "-";
+
+
+                dataHM.set("Yesterday_" + myusername, Math.floor(yesterdayDataTemp) || 0);
+
+                /// set data to chart manually
+                thisMonthDataDetailChat.data.datasets[0].data[currentIndexTemp] = Math.floor(cumulative); // Update value for 'B'
+                thisMonthDataDetailChat.update();
+
+
+                //
+                // let totalMonthValue = document.getElementById("mainValueDiv_Yesterday" + "_" + myusername).innerText;
+                // totalMonthValue = parseInt(totalMonthValue)
+                // log("totalMonthValue: " + totalMonthValue + " | " + myusername);
+
+                let mainValueDiv_Today = document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText;
+
+                // mainValueDiv_Today = parseInt(mainValueDiv_Today) + totalMonthValue;  // total month value + today value
+
+                let totalThisMonthWithoutToday = parseFloat(dataHM.get("ThisMonth_" + myusername));
+                let totalThisMonth = parseInt(mainValueDiv_Today) + totalThisMonthWithoutToday;
+
+                document.getElementById("mainValueDiv_Yesterday" + "_" + myusername).innerText = totalThisMonth || "-";
+
+                // for other than account 1, dont save the total
+                dataHM.set("ThisMonth_" + myusername, totalThisMonthWithoutToday);
+
+                //log(dataHM);
+
+            }
+
+
+            //if(todayData[3].)
+            //log(labels);
+            //log(pvData);
+
+            const data =
+            {
+                labels: labels,
+                datasets: [
+                    {
+                        // pointBackgroundColor: 'rgb(77, 77, 255)', // Dot fill color 
+                        // pointBorderColor: 'white',
+                        fill: true,
+                        backgroundColor: 'rgba(22, 100, 100, 0.5)', // total revenue background coor
+                        pointRadius: 1, // Make dots bigger
+                        label: 'Rain Today',
+                        data: rainSums,
+                        borderColor: 'rgba(0, 255, 253, 0.5)',  // PV border color
+                        borderWidth: 20, // thickness of the line: default is 3
+                        tension: 0.3,
+                        yAxisID: 'y2',
+                        order: 0
+                    },
+                    {
+                        // pointBackgroundColor: 'rgb(77, 77, 255)', // Dot fill color 
+                        // pointBorderColor: 'white',
+                        pointRadius: 1, // Make dots bigger
+                        label: 'PV (W)',
+                        data: pvData,
+                        borderColor: 'red',  // PV border color
+                        borderWidth: 20, // thickness of the line: default is 3
+                        tension: 0.2,
+                        yAxisID: 'y1',
+                        order: 1
+                    },
+                    {
+                        fill: true,
+                        order: 2,
+                        label: 'Culmulative Net Revenue (MYR)',
+                        data: netRevenue,
+                        borderColor: '#28b900', // total revenue border color
+                        backgroundColor: 'rgba(147, 255, 117, 0.5)', // total revenue background coor
+                        borderWidth: 20, // thickness of the line: default is 3
+                        // pointBorderColor: 'white',
+                        // pointBackgroundColor: 'rgb(244, 237, 14)', // Dot fill color
+                        pointRadius: 1, // Make dots bigger
+                        tension: 0.2,
+                        yAxisID: 'y'
+                    }
+                ]
+            }
+
+            const chartSetup = {
+                type: 'line',
+                data: data,
+                options:
+                {
+                    maintainAspectRatio: false, // allows you to set a custom height
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: false,
+                            text: 'Net Revenue for Today',
+                            color: '#FFECA1',
+                            align: 'center' // Moves title to the right
+                        },
+                        legend: {
+                            display: false,
+                            responsive: true,
+                            position: "bottom",
+                            labels: {
+                                boxWidth: 36,
+                                padding: 40,
+                                font: {
+                                    size: 34
+                                },
+                            },
+                            align: "bottom",
+                        },
+                        tooltip:
+                        {
+                            filter: function (context) {
+                                const isLastDataIndex = context.dataIndex === context.chart.data.labels.length - 1;
+
+                                if (context.dataset.label == 'Rain Today') {
+                                    if (context.raw == 0)
+                                        return false;
+                                }
+
+                                if (isLastDataIndex && context.dataset.label === 'PV (W)') {
+
+                                    return false;
+                                }
+
+                                return true; // Show all else
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+
+                        x: {
+                            ticks:
+                            {
+                                font:
+                                {
+                                    size: 30,
+                                    family: 'Courier New',  // 👈 Your custom font
+
+                                },
+                                color: 'white',
+                                callback: function (value, index, ticks) {
+                                    let label = this.getLabelForValue(value);
+                                    // label is like "10/7/2025 06:30"
+                                    label = label.split(' ')[1] || label;
+                                    label = label.replace(":", "");
+                                    return label;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.2)', // Grid line color
+                                drawBorder: false,
+                            }
+
+
+                        },
+                        y: {
+                            ticks:
+                            {
+
+                                color: '#37FC02', //total revenue Y axis legend
+                                font:
+                                {
+                                    size: 40,
+                                    family: 'Courier New',  // 👈 Your custom font
+
+                                },
+                                stepSize: 50,
+                                callback: function (value) {
+                                    return "RM" + value;
+                                }
+
+                            },
+                            grid:
+                            {
+                                color: 'rgba(255,255,255,0.2)', // Grid line color
+                                drawBorder: false,
+                            },
+                            beginAtZero: true,
+                            offset: false
+                        },
+                        y1: {
+                            // your axis chartSetup
+
+                            ticks:
+                            {
+                                display: true,
+                                beginAtZero: true,
+                                padding: 5,
+                                offset: true,
+                                color: '#FC8B8B',  // PV Y axis legend
+                                font:
+                                {
+                                    size: 40,
+                                    family: 'Courier New',  // 👈 Your custom font
+
+                                },
+                                callback: function (value) {
+                                    if (value >= 1000) {
+                                        return value / 1000 + 'k';
+                                    }
+                                    return value;
+                                }
+
+                            }
+                        },
+                        y2: {
+                            // rain data chartSetup                                    
+                            ticks:
+                            {
+                                maxTicksLimit: 2,
+                                display: true,
+                                beginAtZero: true,
+                                padding: 5,
+                                offset: true,
+                                color: 'cyan',  // PV Y axis legend
+                                font:
+                                {
+                                    size: 35,
+                                    family: 'Courier New',
+                                },
+                                callback: function (value) {
+                                    return value + "mm";
+                                }
+
+                            }
+                        }
+
+                    }
+                },
+                plugins: [rainPlugin, dataLabelsPlugin] // Register plugins here
+            };
+
+            // Render chart
+            // Render chart
+            if (thisDayDailyDataDetailChat) {
+                thisDayDailyDataDetailChat.data = data;
+                thisDayDailyDataDetailChat.update('none');
+            } else {
+                let thisDayDetailChart = document.getElementById('thisDayDetailChart' + "_" + myusername);
+                //thisDayDetailChart.style = "margin-right: 200px; padding-right:200px";
+
+                if (thisDayDetailChart) {
+                    thisDayDailyDataDetailChat = new Chart(thisDayDetailChart, chartSetup);
+                    thisDayDailyDataDetailChat_Map.set(myusername, thisDayDailyDataDetailChat);
+                }
+            }
+            // ----------------------------------------
+            // Custom Overlay Legend (to avoid resizing chart)
+            // ----------------------------------------
+            const canvasEl = document.getElementById('thisDayDetailChart' + "_" + myusername);
+            if (canvasEl && canvasEl.parentNode) {
+                // Ensure parent positioning context
+                if (window.getComputedStyle(canvasEl.parentNode).position === 'static') {
+                    canvasEl.parentNode.style.position = 'relative';
+                }
+
+                const legendId = 'legendOverlay_' + myusername;
+                let legendDiv = document.getElementById(legendId);
+
+                // Create if not exists
+                if (!legendDiv) {
+                    legendDiv = document.createElement('div');
+                    legendDiv.id = legendId;
+                    Object.assign(legendDiv.style, {
+                        position: 'absolute',
+                        bottom: '200px',
+                        left: '350px',
+                        width: '100%',
+                        display: 'inline-block',
+                        justifyContent: 'center',
+                        gap: '40px',
+                        pointerEvents: 'none', // Allow clicks to pass through to chart
+                        zIndex: '10'
+                    });
+                    canvasEl.parentNode.appendChild(legendDiv);
+                }
+
+                // Populate Legend Items
+                legendDiv.innerHTML = '';
+                data.datasets.forEach(ds => {
+                    // Skip if hidden? Standard behavior shows all.
+
+                    const item = document.createElement('div');
+                    Object.assign(item.style, {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
+                    });
+
+                    // Box
+                    const box = document.createElement('div');
+                    // Handle box color: use background if available, else border
+                    let bg = ds.backgroundColor;
+                    if (!bg && ds.borderColor) bg = ds.borderColor;
+
+                    Object.assign(box.style, {
+                        width: '36px',
+                        height: '14px', // Rectangular box often looks better for lines
+                        backgroundColor: bg,
+                        border: '2px solid ' + (ds.borderColor || bg),
+                        // borderRadius: '4px' 
+                    });
+
+                    // Label
+                    const label = document.createElement('span');
+
+                    let eachLegendTitle = ds.label;
+
+                    if (eachLegendTitle.startsWith('Culmulative')) {
+                        eachLegendTitle = "Revenue";
+                    }
+
+                    label.textContent = eachLegendTitle;
+
+
+                    Object.assign(label.style, {
+                        color: 'white', // Assuming dark theme based on body background-color: black
+                        fontFamily: 'Courier New',
+                        fontSize: '44px',
+                        // fontWeight: 'bold',
+                        textShadow: '1px 1px 2px black'
+                    });
+
+                    item.appendChild(box);
+                    item.appendChild(label);
+                    legendDiv.appendChild(item);
+                });
+            }
+            // ----------------------------------------
+
+        }
+        //
+
+        const brightColors = [
+            "#00E5FF", // bright cyan
+            "#00FF00", // lime
+            "#FF9800", // orange
+            "#FF00FF", // magenta
+            "#FFEB3B", // bright yellow
+            "#D500F9", // violet
+            "#FF1744", // red-pink
+            "#1DE9B6", // aquamarine
+            "#FFD600"  // light yellow
+        ];
+
+        function getColorRemaining() {
+            if (brightColors.length === 0) {
+                return "white"; // or fallback color if you want
+            }
+            return brightColors.shift();
+        }
+
+        function hexToHSL(hex) {
+            // Remove #
+            hex = hex.replace('#', '');
+            // Convert 3-digit to 6-digit
+            if (hex.length === 3) {
+                hex = hex.split('').map(x => x + x).join('');
+            }
+            let r = parseInt(hex.substring(0, 2), 16);
+            let g = parseInt(hex.substring(2, 4), 16);
+            let b = parseInt(hex.substring(4, 6), 16);
+
+            r /= 255; g /= 255; b /= 255;
+
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max == min) {
+                h = s = 0; // achromatic
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return {
+                h: Math.round(h * 360),
+                s: Math.round(s * 100),
+                l: Math.round(l * 100)
+            };
+        }
+
+        function makeGradientFromMainColor(mainHex) {
+            const hsl = hexToHSL(mainHex);
+            // Generate lighter and darker shades, e.g. L-25, L, L+20
+            let light1 = `hsl(${hsl.h},${hsl.s}%,${Math.min(hsl.l + 20, 95)}%)`;
+            let base = `hsl(${hsl.h},${hsl.s}%,${hsl.l}%)`;
+            let dark1 = `hsl(${hsl.h},${hsl.s}%,${Math.max(hsl.l - 25, 15)}%)`;
+            // Symmetrical for looping:
+            return [dark1, base, light1, base, dark1].join(', ');
+        }
+
+        var selectedUsers = [];
+
+        var firstUsernameInit = null;
+
+        let manualFixData = true;
+
+        let usernamesHM = new Map();
+
+
+        var minRatio = "";
+        var maxRatio = "";
+        var currentRatio = "";
+
+        $(document).ready(async function () {
+
+
+            showProgressDialog();
+
+            getSelectedURL();
+
+            available_accounts = await getAllAccount(); // get all account from server           
+
+            log(available_accounts);
+
+            let usernameInfo = await getUsernameInfo();
+            usernameInfo.forEach(user => {
+                usernamesHM.set(user.username, user);
+            });
+
+
+            // init top
+            {
+                let mainColor = getColorRemaining();
+                const gradientString = makeGradientFromMainColor(mainColor);
+                let container = document.createElement('div');
+                container.id = "container_top";
+                container.className = 'divAccountContainerTop';
+                container.style.borderColor = mainColor;
+                container.style.setProperty('--border-gradient', gradientString);
+                container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
+
+                ///
+                const divLastMonthTotalMain = document.createElement('div');
+                divLastMonthTotalMain.style.display = "grid";
+                divLastMonthTotalMain.style.justifyItems = "center";
+
+                const divTotalThisMonthMain = document.createElement('div');
+                divTotalThisMonthMain.style.display = "grid";
+                divTotalThisMonthMain.style.justifyItems = "center";
+
+                const divTodayTotalMain = document.createElement('div');
+                divTodayTotalMain.style.display = "grid";
+                divTodayTotalMain.style.justifyItems = "center";
+
+
+                ///// total last month
+
+                let labelThisLastTotal = document.createElement('label');
+                labelThisLastTotal.className = "labelTotal";
+                labelThisLastTotal.appendChild(document.createTextNode('Last Month'));
+
+
+                const divLastMonthTotal = document.createElement('div');
+                divLastMonthTotal.id = "divTodayLastMonth_Today";
+                divLastMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+                divLastMonthTotal.innerHTML = "-";
+
+                divLastMonthTotalMain.appendChild(labelThisLastTotal);
+                divLastMonthTotalMain.appendChild(divLastMonthTotal);
+                container.appendChild(divLastMonthTotalMain);
+
+
+                ////////// total this month
+
+
+                let labelThisMonthTotal = document.createElement('label');
+                labelThisMonthTotal.className = "labelTotal";
+                labelThisMonthTotal.appendChild(document.createTextNode('This Month'));
+
+
+                const divThisMonthTotal = document.createElement('div');
+                divThisMonthTotal.id = "divTodayThisMonth_Today";
+                divThisMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+                divThisMonthTotal.innerHTML = "-";
+
+                divTotalThisMonthMain.appendChild(labelThisMonthTotal);
+
+                let divThisMonthTotal_Layout = document.createElement('div');
+                divThisMonthTotal_Layout.style.display = "inline-flex";
+
+                divThisMonthTotal_Layout.appendChild(divThisMonthTotal);
+                divTotalThisMonthMain.appendChild(divThisMonthTotal_Layout);
+
+
+                container.appendChild(divTotalThisMonthMain);
+
+
+                //////  today total
+                let labelToday = document.createElement('label');
+                labelToday.className = "labelTotal";
+                labelToday.appendChild(document.createTextNode('Today'));
+
+                let sunTotalToday = document.createElement('span');
+                sunTotalToday.className = "dot2";
+
+                sunTotalToday.onclick = function () {
+                    window.location.href = "/index";
+                    setSelectedURL("/index");
+                };
+
+
+                const divTodayLayout = document.createElement('div');
+                divTodayLayout.style.display = "inline-flex";
+
+
+                const divTodayTotal = document.createElement('div');
+                divTodayTotal.id = "divTodayTotal_Today";
+                divTodayTotal.innerHTML = "-";
+                divTodayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+
+                const divYesterdayTotal = document.createElement('div');
+                divYesterdayTotal.id = "divTotal_Yesterday";
+                divYesterdayTotal.innerHTML = "-";
+                divYesterdayTotal.className = "mainValueClass2";
+                divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+
+                divTodayLayout.appendChild(divTodayTotal);
+                divTodayLayout.appendChild(divYesterdayTotal);
+
+                const divTodayTotal_Top = document.createElement('div');
+                divTodayTotal_Top.style = "display: inline-flex;align-items: center;";
+                divTodayTotal_Top.appendChild(sunTotalToday)
+                divTodayTotal_Top.appendChild(labelToday);
+
+                divTodayTotalMain.appendChild(divTodayTotal_Top)
+                divTodayTotalMain.appendChild(divTodayLayout);
+
+                container.appendChild(divTodayTotalMain);
+                //////////
+
+                document.body.appendChild(container);
+
+
+            }
+
+
+
+
+
+            if (available_accounts != "") {
+                let countMatch = 0;
+
+                // double check with server
+                let accountSelected = getSavedAccounts();
+
+                if (accountSelected != null) {
+                    accountSelected = JSON.parse(accountSelected);
+
+                    if (accountSelected.length != 0) {
+                        available_accounts.forEach(user => {
+                            if (isBlank(accountSelected) == false) {
+                                firstUsernameInit = accountSelected[0].username;
+
+                                for (let i = 0; i < accountSelected.length; i++) {
+                                    if (user.username == accountSelected[i].username) {
+                                        countMatch = countMatch + 1;
+                                    }
+                                }
+                            }
+                        });
+
+                        if (countMatch == accountSelected.length) {
+                            log("OK MATCH");
+                            //log(firstUsernameInit);
+                            //log(accountSelected)
+
+                            rainSettings_Setup();
+
+
+                            await startRefetchInterval();
+                        }
+                    }
+                    else // account selected
+                    {
+                        let temp = [];
+                        temp.push(available_accounts[0]);
+                        selectedUsers = temp
+                        saveAccounts();
+
+                        rainSettings_Setup();
+
+
+
+                        await startRefetchInterval();
+
+
+                    }
+                }
+                else // new clean init
+                {
+                    ///
+                    let temp = [];
+                    temp.push(available_accounts[0]);
+                    selectedUsers = temp
+                    saveAccounts();
+
+                    rainSettings_Setup();
+
+
+                    //////
+                    await startRefetchInterval();
+                }
+            }
+
+
+
+            /// get min and max ratios
+            getHistoryRatios().then(data => {
+                try {
+                    minRatio = data.min.toFixed(2);
+                    maxRatio = data.max.toFixed(2);
+
+                    //log("ABC");
+                    //log(minRatio + " | " + maxRatio);
+
+                    let footer = document.getElementById("bottomFooterContainer");
+                    if (!footer) {
+                        footer = document.createElement('div');
+                        footer.id = "bottomFooterContainer";
+                        // footer.style.position = 'fixed';
+                        footer.style.bottom = '0';
+                        footer.style.left = '0';
+                        // footer.style.width = '100%';
+                        footer.style.zIndex = '1000';
+                        footer.style.display = 'flex';
+                        footer.style.flexDirection = 'row';
+                        footer.style.justifyContent = 'space-between';
+                        footer.style.alignItems = 'center';
+                        footer.style.padding = '0 50px 10px 50px';
+                        footer.style.pointerEvents = 'none';
+                        document.body.appendChild(footer);
+                    }
+
+                    // Ensure we have placeholders for PV left and right
+                    if (!document.getElementById("maxPV_left")) {
+                        let leftPlaceholder = document.createElement('div');
+                        leftPlaceholder.id = "maxPV_left";
+                        leftPlaceholder.style.width = '20%';
+                        leftPlaceholder.style.color = '#ff0000';
+                        leftPlaceholder.style.fontSize = '1vw';
+                        leftPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
+                        leftPlaceholder.style.fontFamily = 'Courier New';
+                        footer.insertBefore(leftPlaceholder, footer.firstChild);
+                    }
+
+                    let ratioElement = document.getElementById("accountRatio");
+                    if (!ratioElement) {
+                        ratioElement = document.createElement('div');
+                        ratioElement.id = "accountRatio";
+                        ratioElement.style.color = 'white';
+                        ratioElement.style.fontSize = '2vw';
+                        ratioElement.style.fontFamily = 'Courier New';
+                        ratioElement.style.textAlign = 'center';
+                        ratioElement.style.flex = '1';
+                        footer.appendChild(ratioElement);
+                    }
+
+                    if (!document.getElementById("maxPV_right")) {
+                        let rightPlaceholder = document.createElement('div');
+                        rightPlaceholder.id = "maxPV_right";
+                        rightPlaceholder.style.width = '20%';
+                        rightPlaceholder.style.color = '#ff0000';
+                        rightPlaceholder.style.fontSize = '1vw';
+                        rightPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
+                        rightPlaceholder.style.fontFamily = 'Courier New';
+                        rightPlaceholder.style.textAlign = 'right';
+                        footer.appendChild(rightPlaceholder);
+                    }
+
+                    ratioElement.innerHTML = `
+    <span class="ratio-label">Ratio:</span> 
+    <span class="val-min">(Min) ${minRatio}</span> 
+    <span class="val-curr">(Live) ${currentRatio}</span> 
+    <span class="val-max">(Max) ${maxRatio}</span>
+`;
+                }
+                catch (err) {
+                    console.log(err);
+                }
+
+            });
+
+            /// get history max PV
+            getHistoryMaxPVData().then(data => {
+                try {
+                    if (data && data.length >= 2) {
+
+                        let footer = document.getElementById("bottomFooterContainer");
+                        if (!footer) {
+                            footer = document.createElement('div');
+                            footer.id = "bottomFooterContainer";
+                            // footer.style.position = 'fixed';
+                            footer.style.bottom = '0';
+                            footer.style.left = '0';
+                            // footer.style.width = '100%';
+                            footer.style.zIndex = '1000';
+                            footer.style.display = 'flex';
+                            footer.style.flexDirection = 'row';
+                            footer.style.justifyContent = 'space-between';
+                            footer.style.alignItems = 'center';
+                            footer.style.padding = '0 50px 10px 50px';
+                            footer.style.pointerEvents = 'none';
+                            document.body.appendChild(footer);
+                        }
+
+                        // Ensure elements exist to be updated
+                        let maxPV_left = document.getElementById("maxPV_left");
+                        if (!maxPV_left) {
+                            maxPV_left = document.createElement('div');
+                            maxPV_left.id = "maxPV_left";
+                            maxPV_left.style.width = '20%';
+                            maxPV_left.style.color = '#ff0000';
+                            maxPV_left.style.fontSize = '1vw';
+                            maxPV_left.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
+                            maxPV_left.style.fontFamily = 'Courier New';
+                            footer.insertBefore(maxPV_left, footer.firstChild);
+                        }
+
+                        let maxPV_right = document.getElementById("maxPV_right");
+                        if (!maxPV_right) {
+                            maxPV_right = document.createElement('div');
+                            maxPV_right.id = "maxPV_right";
+                            maxPV_right.style.width = '20%';
+                            maxPV_right.style.color = '#ff0000';
+                            maxPV_right.style.fontSize = '1vw';
+                            maxPV_right.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
+                            maxPV_right.style.fontFamily = 'Courier New';
+                            maxPV_right.style.textAlign = 'right';
+                            footer.appendChild(maxPV_right);
+                        }
+
+                        // Match accounts and display
+                        // data[0] is tgrsolar (first), data[1] is tgrsolar1 (second)
+                        maxPV_left.innerHTML = `Max PV: ${data[0].max.toFixed(1)} kW`;
+                        maxPV_right.innerHTML = `Max PV: ${data[1].max.toFixed(1)} kW`;
+                    }
+                } catch (err) {
+                    console.log(err);
+                }
+            });
+        });
+
+        /////
+        function updateCountdownDisplay() {
+            $("#topLeft").text("Refresh In " + countdown + "s");
+        }
+
+
+        let intervalId = null; // Store the interval reference
+
+
+        // @@
+        const minuteGap = 2;
+        const gapToRefetch = minuteGap * 60; // seconds (5s for demo, adjust as needed)
+        //const gapToRefetch = 5;
+
+        let countdown = gapToRefetch;
+        let countdownId = null;  // manages the countdown interval
+        let refreshCount = 0;
+
+        async function startRefetchInterval() {
+            // Optionally clear an old interval
+
+            let accountSelected = getSavedAccounts();
+            if (isBlank(accountSelected) == false) {
+                accountSelected = JSON.parse(accountSelected);
+
+                await refetchDataAll(accountSelected);
+
+            }
+
+
+
+            if (countdownId) clearInterval(countdownId);
+
+            countdown = gapToRefetch;
+            updateCountdownDisplay();
+
+            countdownId = setInterval(async () => {
+                countdown--;
+                updateCountdownDisplay();
+
+                if (countdown <= 0) {
+                    countdown = gapToRefetch + 1; // reset countdown
+
+                    let accountSelected = getSavedAccounts();
+                    if (isBlank(accountSelected) == false) {
+                        accountSelected = JSON.parse(accountSelected);
+
+                        refreshCount = refreshCount + 1;
+
+                        if (refreshCount % 30 == 0) // every 30 minutes, refetch all data
+                        {
+                            let usernameInfo = await getUsernameInfo();
+
+                            if (usernameInfo != "")
+                                location.reload();
+                        }
+                        else {
+                            await refetchDataAll(accountSelected);
+                        }
+                    }
+
+
+                    updateCountdownDisplay();
+                }
+            }, 1000);
+        }
+
+        function stopRefetchInterval() {
+
+            if (countdownId) {
+                clearInterval(countdownId);
+                countdownId = null;
+            }
+        }
+
+
+    </script>
+
+
+
+</head>
+
+<body style="margin-top: 0px;">
+
+    <div id="topLeft">
+
+    </div>
+
+    <div class="backgroundLogo"></div>
+
+    <div id="progressDialog" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content">
+            <div class="loader"></div>
+        </div>
+    </div>
+
+    <div id="mobileDiv">
+        <div class="mobileMessage">
+            Please access this web page using a PC or Laptop for better experience.
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+</body>
+
+</html>

@@ -138,6 +138,27 @@
             }
         }
 
+        @media screen and (max-width: 768px) 
+        {
+            body * {
+                display: none !important;   /* hide everything */
+            }
+
+            #mobileDiv,
+            #mobileDiv * {
+                display: block !important;  /* keep this div and its children visible */
+            }
+
+            .mobileMessage
+            {
+                font-size: 5vw;
+                color: white;
+                text-align: center;
+                margin: 20px;
+            }
+        }
+
+
         .tinyLabelDiv
         {
             font-size: 0.8vw;
@@ -170,6 +191,10 @@
 
             padding-left: 50px;
             padding-right: 50px;
+
+            /* font-size: clamp(1.5rem, 5.5vw, 4rem);
+            padding: clamp(1rem, 5vw, 3rem);
+            letter-spacing: clamp(2px, 1.5vw, 30px); */
 
           
             /* padding-bottom: 75px; */
@@ -731,6 +756,14 @@
                     log("last month data");
                     log(lastMonthDataSingleData);
                     
+                    let containerMain = document.getElementById("containerMain");
+
+                    if(containerMain == null) 
+                    {
+                        containerMain = document.createElement('div');
+                        containerMain.id = "containerMain";
+                    }
+
 
                     let container = document.getElementById("container_" + myusername);
 
@@ -749,7 +782,9 @@
                         container.style.borderColor = mainColor;
                         container.style.setProperty('--border-gradient', gradientString);
                         container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
-                        document.body.appendChild(container);
+                        containerMain.appendChild(container);
+
+                        document.body.appendChild(containerMain);
                     }
                     else
                     {
@@ -2020,7 +2055,9 @@ function makeGradientFromMainColor(mainHex) {
 
         $(document).ready(async function () 
         {
-            showProgressDialog();            
+            showProgressDialog();      
+            
+            getSelectedURL();
 
             available_accounts = await getAllAccount(); // get all account from server           
 
@@ -2030,6 +2067,8 @@ function makeGradientFromMainColor(mainHex) {
                 usernamesHM.set(user.username, user.description);
             });
 
+
+        
             
             // init top
             {
@@ -2105,6 +2144,14 @@ function makeGradientFromMainColor(mainHex) {
 
                 let sunTotalToday = document.createElement('span');
                 sunTotalToday.className = "dot2";
+
+
+                sunTotalToday.onclick = function () 
+                {
+                   window.location.href = "/index2";
+                   setSelectedURL("/index2");
+                };
+
 
                 const divTodayLayout = document.createElement('div');
                 divTodayLayout.style.display = "inline-flex";
@@ -2227,6 +2274,30 @@ function makeGradientFromMainColor(mainHex) {
         let countdown = gapToRefetch;
         let countdownId = null;  // manages the countdown interval
         let refreshCount = 0;
+
+        function setSelectedURL(url)
+        {
+            localStorage.setItem('TGSolar_selectedURL', url);
+        }
+      
+
+        function getSelectedURL()
+        {
+            let data = localStorage.getItem('TGSolar_selectedURL');
+            if(isBlank(data) == true)
+            {
+                ///
+            }
+            else
+            {
+                if(window.location.pathname != data)
+                {
+                    window.location.href = data;
+                }
+             
+            }
+          
+        }
  
 
         async function startRefetchInterval() {
@@ -2297,18 +2368,23 @@ function makeGradientFromMainColor(mainHex) {
 
 <body>
 
-    <div id="topLeft">
-        
-    </div>
-
-    <div class="backgroundLogo"></div>
-
-    <div id="progressDialog" class="modal">
-
-        <!-- Modal content -->
-        <div class="modal-content">
-            <div class="loader"></div>
+     <div id="topLeft">
+    
         </div>
+    
+        <div class="backgroundLogo"></div>
+    
+        <div id="progressDialog" class="modal">
+    
+            <!-- Modal content -->
+            <div class="modal-content">
+                <div class="loader"></div>
+            </div>
+        </div>
+
+    <div id="mobileDiv">
+        <div class="mobileMessage">
+            Please access this web page using a PC or Laptop for better experience.
     </div>
     
 

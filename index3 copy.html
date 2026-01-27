@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TG BUNGALOW SOLAR MONITORING</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Premium Battery Component Styles */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #000000;
+            display: flex;
+            /* justify-content: right;
+            align-items: right; */
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            /* Stack vertically */
+            min-height: 100vh;
+            overflow-y: auto;
+            /* Enable scrolling if needed */
+
+            margin: 0;
+        }
+
+        .battery-container {
+            margin-top: 20px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* background: #f8f9fa; */
+            /* Light background to make it pop */
+            border-radius: 12px;
+            /* box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.05); */
+        }
+
+        .battery-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+        }
+
+        .battery-body {
+            width: 280px;
+            height: 140px;
+            border: 6px solid #00ff14;
+            border-radius: 12px;
+            position: relative;
+            padding: 4px;
+            background: #0084ff;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            /* Contains the fill */
+            z-index: 1;
+        }
+
+        /* Glass Reflection Shine */
+        .battery-body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 35%;
+            /* Top shiny half */
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.1));
+            border-radius: 6px 6px 0 0;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .battery-terminal {
+            width: 10px;
+            height: 30px;
+            background-color: #ff0000;
+            border-radius: 0 4px 4px 0;
+            box-shadow: 2px 0 3px rgba(0, 0, 0, 0.2);
+            margin-left: -2px;
+            /* Connects tightly */
+            z-index: 0;
+        }
+
+        .soc-fill {
+            border-radius: 10%;
+        }
+
+        .battery-fill {
+            height: 100%;
+            width: 0%;
+            /* Dynamic */
+            background-color: #00b894;
+            /* Dynamic base color */
+            border-radius: 6px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+            position: relative;
+            z-index: 2;
+
+            /* Stripe Pattern */
+            /* background-image: linear-gradient(45deg,
+                    rgba(255, 255, 255, 0.2) 25%,
+                    transparent 25%,
+                    transparent 50%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0.2) 75%,
+                    transparent 75%,
+                    transparent); */
+            background-size: 20px 20px;
+            animation: move-stripes 1s linear infinite;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Bubbles effect inside the liquid */
+        .battery-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            /* Greenish bubbles (R=150, G=255, B=150) to stand out, matching background size for loop */
+            /* background: radial-gradient(circle, rgba(150, 255, 150, 0.8) 25%, transparent 26%) 0 0; */
+            background: radial-gradient(circle, rgb(225 255 225) 25%, transparent 26%) 0 0;
+            /* Larger grid for larger bubbles */
+            background-size: 30px 30px;
+            opacity: 0.6;
+            animation: bubbles 3s linear infinite;
+            /* Slighting faster 3s for flow */
+        }
+
+        .battery-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 5.4em;
+            font-weight: 800;
+            color: #000000;
+            text-shadow: 1px 1px 12px #ffffff;
+            z-index: 10;
+            /* mix-blend-mode: color-burn; */
+            /* Blends nicely with the fluid */
+        }
+
+        /* High contrast text for readability if blend mode fails or for darker fluids */
+        .battery-text-shadow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1.4em;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.8);
+            z-index: 11;
+            pointer-events: none;
+            mix-blend-mode: soft-light;
+        }
+
+        @keyframes move-stripes {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 20px 20px;
+            }
+        }
+
+        @keyframes bubbles {
+            0% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+                /* Full visibility peak */
+            }
+
+            100% {
+                /* Must match background-size (30px) for seamless loop */
+                transform: translateY(-30px);
+                opacity: 0.5;
+            }
+        }
+
+        .chart-container {
+            width: 80%;
+            max-width: 800px;
+            height: 400px;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            /* Slight glass effect */
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Status Row for Battery & Revenue */
+        .status-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            width: 100%;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .revenue-container {
+            padding: 20px 40px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 250px;
+            /* Match battery height roughly */
+            height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .revenue-label {
+            font-size: 1.2rem;
+            color: #aaaaaa;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .revenue-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #00ff00;
+            /* Neon Green */
+            text-shadow: 0 0 25px rgba(0, 255, 0, 0.6);
+            font-family: 'Courier New', Courier, monospace;
+            line-height: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="status-row">
+        <div class="battery-container">
+            <div class="battery-wrapper">
+                <div class="battery-body">
+                    <div class="battery-fill" id="soc-fill"></div>
+                    <div class="battery-text" id="soc-text">-%</div>
+                </div>
+                <div class="battery-terminal"></div>
+            </div>
+            <!-- Battery Label -->
+            <!-- <div style="text-align: center; color: #aaaaaa; margin-top: 10px; font-weight: 600;">BATTERY LEVEL</div> -->
+        </div>
+
+        <div class="revenue-container">
+            <div class="revenue-label">TODAY'S REVENUE</div>
+            <div class="revenue-value" id="revenue-value">RM -.--</div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="pvChart"></canvas>
+    </div>
+
+
+    <script>
+
+        const deployPublic = true; // public = true, local = false
+
+        const dataIntervalRefresh = 60000; // 60 seconds
+        let pvChartInstance = null; // Global variable for Chart instance
+
+        function log(msg) {
+            console.log(msg);
+        }
+
+        // Helper to get YYYY-MM-DD
+        function getTodayDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function updateBatteryVisual(percentage) {
+            const fill = document.getElementById('soc-fill');
+            const text = document.getElementById('soc-text');
+
+            // Constrain 0-100
+            let val = parseFloat(percentage);
+            if (isNaN(val)) val = 0;
+            val = Math.max(0, Math.min(100, val));
+
+            fill.style.width = val + '%';
+            text.textContent = Math.round(val) + '%';
+
+            // Color coding
+            if (val > 50) {
+                fill.style.backgroundColor = '#4CAF50'; // Green
+            } else if (val > 20) {
+                fill.style.backgroundColor = '#FFC107'; // Amber
+            } else {
+                fill.style.backgroundColor = '#F44336'; // Red
+            }
+        }
+
+
+        function processBattery(data) {
+            if (data.data) {
+
+                const socChart = data.data.infos.find(c =>
+                    (c.name && c.name.toLowerCase().includes('soc')) ||
+                    (c.label && c.label.toLowerCase().includes('soc'))
+                );
+
+
+                if (socChart && socChart.records && socChart.records.length > 0) {
+                    // Find latest non-zero value or just the last value
+                    // Look from end
+                    let latestSOC = 0;
+                    for (let i = socChart.records.length - 1; i >= 0; i--) {
+                        const val = parseFloat(socChart.records[i].value);
+                        if (val > 0) {
+                            latestSOC = val;
+                            break;
+                        }
+                    }
+
+                    // If no non-zero found, might be 0 at start of day, or just take last
+                    if (latestSOC === 0 && socChart.items.length > 0) {
+                        latestSOC = parseFloat(socChart.items[socChart.items.length - 1].value);
+                    }
+
+                    log(`Found SOC: ${latestSOC}%`);
+                    updateBatteryVisual(latestSOC);
+                } else {
+                    log('Warning: SOC chart not found in response');
+                }
+            }
+
+        }
+
+        async function fetchEnergyData(token) {
+            const date = getTodayDate();
+            // Using ID 188432 as requested
+            const url = `https://pv.inteless.com/api/v1/plant/energy/188432/day?lan=en&date=${date}&id=188432`;
+
+            log(`Fetching energy data for ${date}...`);
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Energy fetch failed! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Energy Data:', data);
+                log('✓ Energy Data Fetched Successfully (Check Console)');
+
+                // Extract SOC
+                //log(data.data);
+                processBattery(data);
+                processPV(data);
+                processLoad(data);
+                processSoCHistory(data);
+
+            } catch (error) {
+                console.error('Energy fetch error:', error);
+                log(`Error fetching energy: ${error.message}`);
+            }
+        }
+
+        function processToHalfHour(records) {
+            // Initialize buckets for each half hour 00:00 to 23:30
+            const buckets = {};
+            // Init all buckets to handle incoming data safely
+            for (let h = 0; h < 24; h++) {
+                const hh = String(h).padStart(2, '0');
+                buckets[`${hh}:00`] = { sum: 0, count: 0 };
+                buckets[`${hh}:30`] = { sum: 0, count: 0 };
+            }
+
+            records.forEach(r => {
+                const [h, m] = r.time.split(':').map(Number);
+                const val = parseFloat(r.value);
+
+                let bucketTime;
+                if (m < 30) {
+                    bucketTime = `${String(h).padStart(2, '0')}:00`;
+                } else {
+                    bucketTime = `${String(h).padStart(2, '0')}:30`;
+                }
+
+                if (buckets[bucketTime]) {
+                    buckets[bucketTime].sum += val;
+                    buckets[bucketTime].count++;
+                }
+            });
+
+            // Generate labels filtered by current time
+            const labels = [];
+            const now = new Date();
+            // Subtract 5 minutes from current time to delay the chart limit
+            const currentMinutes = (now.getHours() * 60 + now.getMinutes()) - 5;
+
+            for (let h = 0; h < 24; h++) {
+                const hh = String(h).padStart(2, '0');
+
+                // Check 00:00 - 00:29 bucket (time label 00:00)
+                // If current time is 10:15 (615 mins), we show 10:00 (600 mins) because 600 <= 615
+                if ((h * 60) <= currentMinutes) {
+                    labels.push(`${hh}:00`);
+                }
+
+                // Check 00:30 - 00:59 bucket (time label 00:30)
+                // If current time is 10:15 (615 mins), we do NOT show 10:30 (630 mins) because 630 > 615
+                if ((h * 60 + 30) <= currentMinutes) {
+                    labels.push(`${hh}:30`);
+                }
+            }
+
+            // Calculate averages (or sums if preferred, usually power is inst. so Avg makes sense, Energy is sum)
+            // But since source is "power" (kW), average over the bucket is safer representation of "power during that time".
+            const values = labels.map(timeLabel => {
+                const b = buckets[timeLabel];
+                return b.count > 0 ? (b.sum / b.count) : 0; // or null to break line? 0 is fine for solar at night
+            });
+
+            return { labels, values };
+        }
+
+        // 1-100 kWh: RM 0.175
+        // 101-200 kWh: RM 0.185
+        // 201-300 kWh: RM 0.330
+        // 301-500 kWh: RM 0.445
+
+        function calculateSESBRevenue(totalKWh) {
+            let revenue = 0;
+            let remaining = totalKWh;
+
+            // Tier 1: 1 - 100 kWh: 17.5 sen
+            if (remaining > 0) {
+                const tier = Math.min(remaining, 100);
+                revenue += tier * 0.175;
+                remaining -= tier;
+            }
+
+            // Tier 2: 101 - 200 kWh: 18.5 sen
+            if (remaining > 0) {
+                const tier = Math.min(remaining, 100);
+                revenue += tier * 0.185;
+                remaining -= tier;
+            }
+
+            // Tier 3: 201 - 300 kWh: 33.0 sen
+            if (remaining > 0) {
+                const tier = Math.min(remaining, 100);
+                revenue += tier * 0.330;
+                remaining -= tier;
+            }
+
+            // Tier 4: 301 - 500 kWh: 44.5 sen
+            if (remaining > 0) {
+                const tier = Math.min(remaining, 200);
+                revenue += tier * 0.445;
+                remaining -= tier;
+            }
+
+            // Tier 5: > 500 kWh: 44.5 sen (Assumed same rate for excess)
+            if (remaining > 0) {
+                revenue += remaining * 0.445;
+            }
+
+            return revenue;
+        }
+
+
+
+
+
+        function updateChart(labels, values, color, datasetLabel, yAxisID = 'y', fillFlag, orderIndex) {
+            const ctx = document.getElementById('pvChart').getContext('2d');
+
+            if (!pvChartInstance) {
+                // Create new chart if it doesn't exist
+                pvChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: datasetLabel,
+                            data: values,
+                            borderColor: color,
+                            backgroundColor: color + '33', // Adding alpha if hex
+                            borderWidth: 2,
+                            fill: fillFlag,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            yAxisID: yAxisID,
+                            order: orderIndex
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#aaaaaa' },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                ticks: { color: '#aaaaaa' },
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                title: { display: true, text: 'Power (W)', color: '#aaaaaa' }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                grid: { drawOnChartArea: false }, // only want the grid lines for one axis to show up
+                                ticks: { color: '#00ff00' },
+                                title: { display: true, text: 'Revenue (RM)', color: '#00ff00' }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#ffffff' } },
+                            tooltip: { mode: 'index', intersect: false }
+                        }
+                    }
+                });
+            } else {
+                // Chart exists, check if dataset exists or needs to be added
+                const datasetIndex = pvChartInstance.data.datasets.findIndex(d => d.label === datasetLabel);
+
+                if (datasetIndex >= 0) {
+                    // Update existing
+                    pvChartInstance.data.datasets[datasetIndex].data = values;
+                    pvChartInstance.data.labels = labels; // Update labels just in case time moved forward
+                    pvChartInstance.update();
+                } else {
+                    // Add new dataset
+                    pvChartInstance.data.datasets.push({
+                        label: datasetLabel,
+                        data: values,
+                        borderColor: color,
+                        backgroundColor: color + '33',
+                        borderWidth: 2,
+                        fill: fillFlag,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        yAxisID: yAxisID
+                    });
+                    pvChartInstance.update();
+                }
+            }
+        }
+
+
+        function processPV(data) {
+            if (data.data) {
+
+                const pvChartInfo = data.data.infos.find(c =>
+                    (c.name && c.name.toLowerCase().includes('pv')) ||
+                    (c.label && c.label.toLowerCase().includes('pv'))
+                );
+
+                if (pvChartInfo && pvChartInfo.records && pvChartInfo.records.length > 0) {
+                    // NEW: Process to Half-Hour intervals
+                    const { labels, values } = processToHalfHour(pvChartInfo.records);
+                    log(`Updating PV Chart with ${values.length} points (Half-Hour Intervals).`);
+
+                    // New: Calculate Accumulated Revenue (Tiered)
+                    let accumulatedEnergyKWh = 0;
+                    const revenueValues = values.map(val => {
+                        // val is Avg Power in Watts -> Avg Power in kW = val / 1000
+                        // Energy in kWh for 30 mins = (val / 1000) * 0.5
+                        const energyKWh = (val / 1000) * 0.5;
+                        accumulatedEnergyKWh += energyKWh;
+
+                        // Calculate revenue based on TOTAL accumulated energy so far
+                        const totalRevenue = calculateSESBRevenue(accumulatedEnergyKWh);
+
+                        return totalRevenue;
+                    });
+
+
+
+                    // Update Big Revenue Display
+                    // Get the last value (total accumulated so far)
+                    const totalAccumulatedRevenue = revenueValues[revenueValues.length - 1] || 0;
+                    document.getElementById('revenue-value').textContent = 'RM ' + totalAccumulatedRevenue.toFixed(2);
+
+
+                    // Render/Update Chart with Revenue on secondary axis
+                    // 1. PV Power (Left Axis 'y')
+                    updateChart(labels, values, '#ffce56', 'PV Power (W)', 'y', false, 2);
+                    // 2. Acc. Revenue (Right Axis 'y1')
+                    updateChart(labels, revenueValues, '#00ff00', 'Acc. Revenue (RM)', 'y1', true, 1);
+                } else {
+                    log('Warning: PV chart not found in response');
+                }
+            }
+        }
+
+        function processSoCHistory(data) {
+            if (data.data) {
+
+                const loadData = data.data.infos.find(c =>
+                    (c.name && c.name.toLowerCase().includes('soc')) ||
+                    (c.label && c.label.toLowerCase().includes('soc'))
+                );
+
+                if (loadData && loadData.records && loadData.records.length > 0) {
+                    log("Processing SoC Data...");
+
+
+                    //log(loadData);
+
+                    const { labels, values } = processToHalfHour(loadData.records);
+
+                    //log(labels);
+                    //log(values);
+
+                    // 1. SoC
+                    updateChart(labels, values, '#67dbff', 'SoC', 'y1', false, 4);
+
+                } else {
+                    log('Warning: Load not found in response');
+                }
+            }
+        }
+
+        function processLoad(data) {
+            if (data.data) {
+
+                const loadData = data.data.infos.find(c =>
+                    (c.name && c.name.toLowerCase().includes('load')) ||
+                    (c.label && c.label.toLowerCase().includes('load'))
+                );
+
+                if (loadData && loadData.records && loadData.records.length > 0) {
+                    log("Processing Load Data...");
+
+                    const { labels, values } = processToHalfHour(loadData.records);
+
+                    // Render/Update Chart with Red color for Load
+                    updateChart(labels, values, '#ff3333', 'Load Power (W)', 'y', false, 3);
+
+                } else {
+                    log('Warning: Load not found in response');
+                }
+            }
+        }
+
+
+
+        async function fetchUserData() {
+            log("Fetching user data...");
+
+
+            const url = deployPublic ? '/getAllUNP/TGBUNGALOW' : 'http://127.0.0.1:40555/getAllUNP/TGBUNGALOW';
+
+            try {
+                // 1. Fetch Credentials
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Local fetch error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('fetched data:', data);
+
+                if (data[0].username && data[0].password) {
+                    // 2. Authenticate
+                    const authUrl = 'https://pv.inteless.com/oauth/token/new';
+                    const authPayload = {
+                        username: data[0].username,
+                        password: data[0].password,
+                        grant_type: "password",
+                        client_id: "csp-web",
+                        source: "elinter"
+                    };
+
+                    const authResponse = await fetch(authUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(authPayload)
+                    });
+
+                    if (!authResponse.ok) {
+                        const errorText = await authResponse.text();
+                        throw new Error(`Auth failed! Status: ${authResponse.status}, Body: ${errorText}`);
+                    }
+
+                    const authData = await authResponse.json();
+                    console.log('Auth response:', authData);
+
+
+                    if (authData.data.access_token) {
+                        let access_token = authData.data.access_token;
+
+                        let tokenObject = new Object();
+                        tokenObject.access_token = access_token;
+                        tokenObject.expiry = new Date().getTime();
+
+                        localStorage.setItem('access_token', JSON.stringify(tokenObject));
+
+                        log('✓ Access Token extracted and saved to localStorage!');
+                        log(`Token: ${access_token.substring(0, 20)}...`);
+
+
+                        // NEW: Fetch Energy Data immediately after getting token
+                        fetchEnergyData(access_token); // start now
+                        setInterval(() => fetchEnergyData(access_token), dataIntervalRefresh);
+
+
+
+                    } else {
+                        log('✗ Access Token NOT found in response.');
+                    }
+
+                } else {
+                    log('Username or password missing from local data.');
+                }
+
+            } catch (error) {
+                console.error('Process error:', error);
+                log(`Error: ${error.message}`);
+            }
+        }
+
+
+        // Call the function when the page loads
+        let accessTokenSaved = localStorage.getItem('access_token');
+
+
+        if (accessTokenSaved) {
+            let access_tokenObj = JSON.parse(accessTokenSaved);
+            let expiry = access_tokenObj.expiry;
+
+            let differenceInMinutes = (new Date().getTime() - expiry) / 60000;
+
+            //let differenceInSeconds = (new Date().getTime() - expiry) / 1000;
+            // log("differenceInSeconds: " + differenceInSeconds);
+            // if (differenceInSeconds > 10) {
+            // exactly 5 days
+            //   if (differenceInMinutes > 5 * 24 * 60) {
+
+            if (differenceInMinutes > 5 * 24 * 60) {
+                localStorage.removeItem('access_token');
+                fetchUserData();
+            }
+            else {
+                //do nothing
+                log(`Token valid. Age: ${Math.round(differenceInMinutes)} mins.`);
+                // NEW: Token exists and is valid, so fetch energy data
+                //   fetchEnergyData(access_tokenObj.access_token);
+
+                fetchEnergyData(access_tokenObj.access_token);
+                setInterval(() => fetchEnergyData(access_tokenObj.access_token), dataIntervalRefresh);
+            }
+        }
+        else {
+            fetchUserData();
+        }
+    </script>
+</body>
+
+</html>
