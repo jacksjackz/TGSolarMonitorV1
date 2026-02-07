@@ -895,7 +895,6 @@
         // even if PV production is 0, the battery is discharging power to the house
         // every kwh of battery discharges (output) considers as "savings", even if there is no sun
         function processSavings(dailyData, elementId = 'savings-value') {
-
             log(dailyData);
             if (!dailyData || !dailyData.data) {
                 // log('processSavings: No data provided for ' + elementId);
