@@ -267,104 +267,14 @@
             font-family: 'Courier New', Courier, monospace;
             line-height: 1;
         }
-
-        /* Date Navigation */
-        .date-nav {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 16px;
-            width: 100%;
-        }
-
-        .date-nav-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-            font-size: 2.2rem;
-            font-weight: 700;
-            padding: 14px 28px;
-            border-radius: 14px;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-        }
-
-        .date-nav-btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.05);
-        }
-
-        .date-nav-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .date-nav-label {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #ffffff;
-            letter-spacing: 1px;
-            min-width: 160px;
-            text-align: center;
-        }
-
-        .date-nav-sublabel {
-            font-size: 0.7rem;
-            color: #aaaaaa;
-            text-align: center;
-        }
-
-        .date-nav-clickable {
-            cursor: pointer;
-            position: relative;
-        }
-
-        .date-nav-clickable:hover .date-nav-label {
-            text-decoration: underline;
-            text-underline-offset: 4px;
-        }
-
-        .date-picker-hidden {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-            z-index: 20;
-        }
-
-        /* Make the calendar icon fill the entire input on desktop */
-        .date-picker-hidden::-webkit-calendar-picker-indicator {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            cursor: pointer;
-        }
     </style>
 </head>
 
 <body>
 
 
-    <div class="date-nav">
-        <button class="date-nav-btn" id="btn-prev-day" onclick="navigateDay(-1)">◀</button>
-        <div class="date-nav-clickable">
-            <div class="date-nav-label" id="date-nav-label">TODAY</div>
-            <div class="date-nav-sublabel" id="date-nav-sublabel"></div>
-            <input type="date" id="date-picker" class="date-picker-hidden" onchange="onDatePicked(this.value)">
-        </div>
-        <button class="date-nav-btn" id="btn-next-day" onclick="navigateDay(1)" disabled>▶</button>
-    </div>
-
     <div class="status-row">
-        <div class="battery-container" id="battery-container">
+        <div class="battery-container">
             <div class="battery-wrapper">
                 <div class="battery-body">
                     <div class="battery-fill" id="soc-fill"></div>
@@ -377,7 +287,7 @@
         </div>
 
         <div class="revenue-container">
-            <div class="revenue-label" id="production-label">TODAY'S PRODUCTION</div>
+            <div class="revenue-label">TODAY'S PRODUCTION</div>
             <div class="revenue-value" id="revenue-value">RM -.--</div>
             <div class="revenue-label2">From 12am, based on PV Generation</div>
             <div id="max-pv-value" style="margin-top: 5px; font-size: 1.5rem; color: #ffce56; font-weight: 700;">Peak
@@ -388,14 +298,12 @@
         </div>
 
         <div class="revenue-container">
-            <div class="revenue-label" id="savings-label">TODAY'S SAVINGS</div>
+            <div class="revenue-label">TODAY'S SAVINGS</div>
             <div class="revenue-value" id="savings-value">RM -.--</div>
             <!-- <div class="revenue-label2">From 12am, based on Self-Consumption</div> -->
 
-            <div id="yesterday-savings-section">
-                <div class="revenue-label">YESTERDAY'S SAVINGS</div>
-                <div class="revenue-value" id="yesterday-savings-value">RM -.--</div>
-            </div>
+            <div class="revenue-label">YESTERDAY'S SAVINGS</div>
+            <div class="revenue-value" id="yesterday-savings-value">RM -.--</div>
 
         </div>
     </div>
@@ -412,148 +320,26 @@
         const dataIntervalRefresh = 60000; // 60 seconds
         let pvChartInstance = null; // Global variable for Chart instance
 
-        // --- Day Navigation State ---
-        let viewingDate = new Date(); // Currently viewed date (defaults to today)
-        let refreshIntervalId = null; // Track the auto-refresh interval
-
-        function formatDateYMD(date) {
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-        }
-
-        function formatDateDMY(date) {
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            return `${dd}-${mm}-${yyyy}`;
-        }
-
-        function isViewingToday() {
-            return formatDateYMD(viewingDate) === formatDateYMD(new Date());
-        }
-
-        function updateDateNavUI() {
-            const label = document.getElementById('date-nav-label');
-            const sublabel = document.getElementById('date-nav-sublabel');
-            const btnNext = document.getElementById('btn-next-day');
-            const datePicker = document.getElementById('date-picker');
-
-            const prodLabel = document.getElementById('production-label');
-            const savLabel = document.getElementById('savings-label');
-            const yesterdaySection = document.getElementById('yesterday-savings-section');
-            const batteryContainer = document.getElementById('battery-container');
-
-            // Sync the hidden date picker
-            datePicker.value = formatDateYMD(viewingDate);
-            datePicker.max = formatDateYMD(new Date()); // Can't pick future
-
-            if (isViewingToday()) {
-                label.textContent = 'TODAY';
-                sublabel.textContent = formatDateDMY(viewingDate);
-                btnNext.disabled = true;
-                prodLabel.textContent = "TODAY'S PRODUCTION";
-                savLabel.textContent = "TODAY'S SAVINGS";
-                yesterdaySection.style.display = '';
-                batteryContainer.style.display = '';
-            } else {
-                const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                label.textContent = formatDateDMY(viewingDate);
-                sublabel.textContent = dayNames[viewingDate.getDay()];
-                btnNext.disabled = false;
-                prodLabel.textContent = 'PRODUCTION';
-                savLabel.textContent = 'SAVINGS';
-                yesterdaySection.style.display = 'none';
-                batteryContainer.style.display = 'none';
-            }
-        }
-
-        function openDatePicker() {
-            const picker = document.getElementById('date-picker');
-            picker.showPicker();
-        }
-
-        function onDatePicked(value) {
-            if (!value) return;
-            const [yyyy, mm, dd] = value.split('-').map(Number);
-            viewingDate = new Date(yyyy, mm - 1, dd);
-
-            // Don't go into the future
-            const today = new Date();
-            if (viewingDate > today) viewingDate = today;
-
-            updateDateNavUI();
-
-            // Destroy chart for clean rebuild
-            if (pvChartInstance) {
-                pvChartInstance.destroy();
-                pvChartInstance = null;
-            }
-
-            // Re-fetch
-            const tokenStr = localStorage.getItem('access_token');
-            if (tokenStr) {
-                const tokenObj = JSON.parse(tokenStr);
-                fetchEnergyData(tokenObj.access_token);
-            }
-
-            // Manage auto-refresh
-            if (refreshIntervalId) {
-                clearInterval(refreshIntervalId);
-                refreshIntervalId = null;
-            }
-            if (isViewingToday() && tokenStr) {
-                const tokenObj = JSON.parse(tokenStr);
-                refreshIntervalId = setInterval(() => fetchEnergyData(tokenObj.access_token), dataIntervalRefresh);
-            }
-        }
-
-        function navigateDay(offset) {
-            viewingDate.setDate(viewingDate.getDate() + offset);
-            // Don't go into the future
-            const today = new Date();
-            if (viewingDate > today) viewingDate = today;
-
-            updateDateNavUI();
-
-            // Destroy existing chart so it rebuilds cleanly
-            if (pvChartInstance) {
-                pvChartInstance.destroy();
-                pvChartInstance = null;
-            }
-
-            // Re-fetch with current token
-            const tokenStr = localStorage.getItem('access_token');
-            if (tokenStr) {
-                const tokenObj = JSON.parse(tokenStr);
-                fetchEnergyData(tokenObj.access_token);
-            }
-
-            // Manage auto-refresh: only auto-refresh when viewing today
-            if (refreshIntervalId) {
-                clearInterval(refreshIntervalId);
-                refreshIntervalId = null;
-            }
-            if (isViewingToday() && tokenStr) {
-                const tokenObj = JSON.parse(tokenStr);
-                refreshIntervalId = setInterval(() => fetchEnergyData(tokenObj.access_token), dataIntervalRefresh);
-            }
-        }
-
         function log(msg) {
             console.log(msg);
         }
 
-        // Helper to get YYYY-MM-DD based on viewingDate
+        // Helper to get YYYY-MM-DD
         function getTodayDate() {
-            return formatDateYMD(viewingDate);
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
         }
 
         function getYesterdayDate() {
-            const date = new Date(viewingDate);
+            const date = new Date();
             date.setDate(date.getDate() - 1);
-            return formatDateYMD(date);
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
         }
 
         function updateBatteryVisual(percentage) {
@@ -1318,7 +1104,7 @@
 
                         // NEW: Fetch Energy Data immediately after getting token
                         fetchEnergyData(access_token); // start now
-                        refreshIntervalId = setInterval(() => fetchEnergyData(access_token), dataIntervalRefresh);
+                        setInterval(() => fetchEnergyData(access_token), dataIntervalRefresh);
 
 
 
@@ -1364,7 +1150,7 @@
                 //   fetchEnergyData(access_tokenObj.access_token);
 
                 fetchEnergyData(access_tokenObj.access_token);
-                refreshIntervalId = setInterval(() => fetchEnergyData(access_tokenObj.access_token), dataIntervalRefresh);
+                setInterval(() => fetchEnergyData(access_tokenObj.access_token), dataIntervalRefresh);
             }
         }
         else {
@@ -1375,12 +1161,6 @@
         document.getElementById('soc-text').addEventListener('click', function () {
             location.reload();
         });
-
-        // Initialize date nav UI
-        updateDateNavUI();
-
-        // Auto-reload page every 30 minutes
-        setTimeout(() => location.reload(), 30 * 60 * 1000);
     </script>
 </body>
 
