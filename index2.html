@@ -617,6 +617,10 @@
 
     <script>
 
+        //         Total payback days = 4.82 years × 365 days = 1,759.3 days
+        // Daily savings = RM140,741 ÷ 1,759.3 days
+        // Daily savings = RM80.00 per day
+
 
         const testLocalServer = false; // public = false  // @@@
         const onlineServer = false; // public = true
@@ -1377,10 +1381,19 @@
                                 toDisplay = 'This Month';
                             }
 
+
+                            /// final daily revenue
+                            let valueToDisplay = item.value != '-' ? Math.floor(parseFloat(item.value)) : item.value;
+
+                            if (isNaN(valueToDisplay)) {
+                                valueToDisplay = "-";
+                            }
+
+
                             netRevenue.innerHTML = `
                                 ${section.label === 'Today' ? `<div class="live-indicator"><span class="dot2" id="logoSun"></span>Live ${section.label}<span class="accountInfo">&nbsp;&nbsp;${myusername.split("@")[0]}</span></div>` : ""}
                                 <div class='tinyLabelDiv'>${toDisplay} Revenue (${item.unit ? item.unit : "MYR"})</div>
-                                <div style="display:inline-flex; ">${section.label === 'Today' ? "<div id='" + myusername + "_status' class='currentStatusIndicator'></div>" : ""}<div class='mainValueClass' id="mainValueDiv_${section.label}_${myusername}" >${item.value != '-' ? Math.floor(parseFloat(item.value)) : item.value}</div></div><div id="mainValueDiv2_${section.label}_${myusername}" class="mainValueClass2"></div>`;
+                                <div style="display:inline-flex; ">${section.label === 'Today' ? "<div id='" + myusername + "_status' class='currentStatusIndicator'></div>" : ""}<div class='mainValueClass' id="mainValueDiv_${section.label}_${myusername}" >${valueToDisplay}</div></div><div id="mainValueDiv2_${section.label}_${myusername}" class="mainValueClass2"></div>`;
 
                             if (section.label === 'Last Month') {
                                 let canvasId = 'lastMonthDetailChart' + "_" + myusername;
@@ -2677,7 +2690,7 @@
             //log(labels);
 
 
-            // means time now is ahead of data, but havent recorded yet, so we adjust it // @@@
+            // means time now is ahead of data, but havent recorded yet, so we adjust it // 
 
             {
                 // log("yeay, time now is ahead")
@@ -3522,9 +3535,9 @@
 
 
         // @@
-        // const minuteGap = 2;
-        // const gapToRefetch = minuteGap * 60; // seconds (5s for demo, adjust as needed)
-        const gapToRefetch = 5;
+        const minuteGap = 2;
+        const gapToRefetch = minuteGap * 60; // seconds (5s for demo, adjust as needed)
+        // const gapToRefetch = 5;
 
         let countdown = gapToRefetch;
         let countdownId = null;  // manages the countdown interval
