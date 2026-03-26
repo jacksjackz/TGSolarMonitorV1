@@ -60,6 +60,12 @@ app.use(express.static(__dirname + '/'));
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
+// Disable browser caching for all API responses
+app.use(function (req, res, next) {
+    res.set('Cache-Control', 'no-store');
+    next();
+});
+
 const port = 40555;  // http 
 const displayLog = false;  // false
 
