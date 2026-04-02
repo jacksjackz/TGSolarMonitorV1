@@ -53,6 +53,11 @@ All frontends use Chart.js for graphs, jQuery, Moment.js, and inline `<script>` 
 
 These scripts interact with DOM elements of the third-party solar portal (class names like `el-row`, `indicator-list`, `el-table__body`).
 
+### Highest Revenue Feature
+- **Backend**: `getHighestRevenueByUsername_previousmonth(username)` and `getHighestRevenueByUsername_currentmonth(username)` in `app.js` iterate daily entries in the `json` column (array of objects with `netRevenue`) to find the single highest daily net revenue.
+- **API**: `GET /getHighestRevenue` returns `{ highest }` — the max daily `netRevenue` across both users (`tgrsolar@teckguan.com`, `tgrsolar1@teckguan.com`) and both `datapreviousmonth` (last 3 months) and `datacurrentmonth` tables.
+- **Frontend**: `divTotal_Highest` in `index2.html` displays the result, fetched once (not on interval) at the start of `startRefetchInterval()`.
+
 ### API Pattern
 All API routes use explicit CORS preflight (`app.options`) and `cors(corsOptions)` middleware. POST endpoints expect `req.body.formData.*` structure. Data is stored/returned as JSON strings in the `json` text column.
 

@@ -623,7 +623,7 @@
 
 
         const testLocalServer = false; // public = false  // @@@
-        const onlineServer = false; // public = true
+        const onlineServer = false; // public = true 
 
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1067,13 +1067,20 @@
                         if (getYesterday == "-")
                             getYesterday = 0;
 
-                        //log(getToday + " | " + getThisMonth + " | " + getLastMonth);
+                        log("Fetch Data All: " + getToday + " | " + getThisMonth + " | " + getLastMonth);
 
                         if (isBlank(getToday) == false)
                             totalToday = totalToday + parseFloat(getToday);
 
                         if (isBlank(getThisMonth) == false)
+                        { 
                             totalThisMonth = totalThisMonth + parseFloat(getThisMonth);
+
+                            let totalThisMonth2 = dataHM.get("ThisMonth_OtherAcc_ExtraInfo_" + obj.username) || 0;
+                            totalThisMonth = totalThisMonth + parseFloat(totalThisMonth2);
+                  
+                            //log("abc: " + obj.username + " || ExtraInfo: " + totalThisMonth2);
+                        }
 
                         if (isBlank(getLastMonth) == false)
                             totalLastMonth = totalLastMonth + parseFloat(getLastMonth);
@@ -2797,9 +2804,9 @@
 
                 // for other than account 1, dont save the total
                 dataHM.set("ThisMonth_" + myusername, totalThisMonthWithoutToday);
+                dataHM.set("ThisMonth_OtherAcc_ExtraInfo_" + myusername, parseInt(mainValueDiv_Today));
 
                 //log(dataHM);
-
             }
 
 
@@ -3297,10 +3304,21 @@
                 divYesterdayTotal.id = "divTotal_Yesterday";
                 divYesterdayTotal.innerHTML = "-";
                 divYesterdayTotal.className = "mainValueClass2";
-                divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+                divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); margin-top: 1px";
+
+                const divHighestTotal = document.createElement('div');
+                divHighestTotal.id = "divTotal_Highest";
+                divHighestTotal.innerHTML = "-";
+                divHighestTotal.className = "mainValueClass2";
+                divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2; margin-top: 22px;";
+
+                const divRightColumn = document.createElement('div');
+
+                divRightColumn.appendChild(divYesterdayTotal);
+                divRightColumn.appendChild(divHighestTotal);
 
                 divTodayLayout.appendChild(divTodayTotal);
-                divTodayLayout.appendChild(divYesterdayTotal);
+                divTodayLayout.appendChild(divRightColumn);
 
                 const divTodayTotal_Top = document.createElement('div');
                 divTodayTotal_Top.style = "display: inline-flex;align-items: center;";
@@ -3545,6 +3563,11 @@
 
         async function startRefetchInterval() {
             // Optionally clear an old interval
+
+            // one-time fetch highest revenue
+            fetch(url + '/getHighestRevenue').then(res => res.json()).then(data => {
+                document.getElementById('divTotal_Highest').innerHTML = data.highest;
+            });
 
             let accountSelected = getSavedAccounts();
             if (isBlank(accountSelected) == false) {
