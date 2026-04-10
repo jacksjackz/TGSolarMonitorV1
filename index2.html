@@ -623,7 +623,7 @@
 
 
         const testLocalServer = false; // public = false  // @@@
-        const onlineServer = false; // public = true 
+        const onlineServer = true; // public = true 
 
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1072,27 +1072,30 @@
                         if (isBlank(getToday) == false)
                             totalToday = totalToday + parseFloat(getToday);
 
-                        if (isBlank(getThisMonth) == false)
-                        { 
+                        if (isBlank(getThisMonth) == false) {
                             totalThisMonth = totalThisMonth + parseFloat(getThisMonth);
 
                             let totalThisMonth2 = dataHM.get("ThisMonth_OtherAcc_ExtraInfo_" + obj.username) || 0;
                             totalThisMonth = totalThisMonth + parseFloat(totalThisMonth2);
-                  
+
                             //log("abc: " + obj.username + " || ExtraInfo: " + totalThisMonth2);
                         }
 
                         if (isBlank(getLastMonth) == false)
                             totalLastMonth = totalLastMonth + parseFloat(getLastMonth);
 
-                        if (isBlank(getYesterday) == false)
+                        if (isBlank(getYesterday) == false) {
                             totalYesterday = totalYesterday + parseFloat(getYesterday);
+                        }
                     }
 
-                    $("#divTodayTotal_Today").text(Math.floor(totalToday));
-                    $("#divTodayThisMonth_Today").text(Math.floor(totalThisMonth));
-                    $("#divTodayLastMonth_Today").text(Math.floor(totalLastMonth));
-                    $("#divTotal_Yesterday").text(Math.floor(totalYesterday));
+                    $("#divTodayTotal_Today").text(Math.round(totalToday));
+                    $("#divTodayThisMonth_Today").text(Math.round(totalThisMonth));
+                    $("#divTodayLastMonth_Today").text(Math.round(totalLastMonth));
+                    $("#divTotal_Yesterday").text(Math.round(totalYesterday));
+
+                    log("abc: " + Math.round(totalYesterday).toFixed(0));
+                    log("abc: " + Math.round(totalYesterday).toFixed(0));
 
                     // Calculate ratio of 1st account vs 2nd account (daily revenue)
                     if (accounts.length >= 2) {
@@ -1220,7 +1223,7 @@
                 var yesterdayData = await getSolarData("id_target_yesterday", false, myusername);
                 var lastMonthDataSingleData = await getSolarData("id_target_last_month", false, myusername);
 
-                log("yesterday data");
+                log("yesterday data - " + myusername + " | " + yesterdayData[3].value);
                 log(yesterdayData);
 
                 log("Last Month Data Single Data")
@@ -1390,7 +1393,7 @@
 
 
                             /// final daily revenue
-                            let valueToDisplay = item.value != '-' ? Math.floor(parseFloat(item.value)) : item.value;
+                            let valueToDisplay = item.value != '-' ? Math.round(parseFloat(item.value)) : item.value;
 
                             if (isNaN(valueToDisplay)) {
                                 valueToDisplay = "-";
@@ -1813,8 +1816,8 @@
             {
                 // manually
                 if (manualFixData == true) {
-                    document.getElementById("mainValueDiv_Last Month_" + myusername).innerText = Math.floor(totalNetRevenue);
-                    dataHM.set("Last Month_" + myusername, Math.floor(totalNetRevenue));
+                    document.getElementById("mainValueDiv_Last Month_" + myusername).innerText = Math.round(totalNetRevenue);
+                    dataHM.set("Last Month_" + myusername, Math.round(totalNetRevenue));
                 }
             }
 
@@ -2003,14 +2006,14 @@
                 log("totalRevenueThisMonth | " + myusername + " | " + totalRevenueThisMonthAndCurrent);
 
                 // this month
-                let valueYesterday = Math.floor(totalRevenueThisMonthAndCurrent);
+                let valueYesterday = Math.round(totalRevenueThisMonthAndCurrent);
                 document.getElementById("mainValueDiv_Yesterday_" + myusername).innerText = (valueYesterday || "-");
                 log("valueYesterday | " + myusername + " | " + valueYesterday);
                 dataHM.set("ThisMonth_" + myusername, valueYesterday);
 
 
                 /// yesterday
-                let valueToday = Math.floor(dataHM.get("Yesterday" + "_" + myusername));
+                let valueToday = Math.round(dataHM.get("Yesterday" + "_" + myusername));
                 document.getElementById("mainValueDiv2_Today_" + myusername).innerText = (valueToday || "-");
 
 
@@ -2305,7 +2308,7 @@
                 return h * 60 + m;
             }
             function fromMinutes(min) {
-                let h = Math.floor(min / 60);
+                let h = Math.round(min / 60);
                 let m = min % 60;
                 return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
             }
@@ -2409,7 +2412,7 @@
                 const savingsRM = energyKWh * ratePerKWh;
 
                 // Round to nearest sen (0.01)
-                const roundedRM = Math.floor(savingsRM * 100) / 100;
+                const roundedRM = Math.round(savingsRM * 100) / 100;
 
                 // Only add real RM value (0.01 and above)
                 cumulativeRM += roundedRM;
@@ -2761,14 +2764,23 @@
             log("cumulative (today): " + cumulative + " | " + myusername); // display today (manually)
 
 
+            // account 1's yesterday data
+            {
+                var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
+                let yesterdayIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 2;
+                let yesterdayDataTest1 = thisMonthDataDetailChat.data.datasets[0].data[yesterdayIndexTemp];
+                dataHM.set("Yesterday_" + myusername, Math.round(yesterdayDataTest1) || 0);
+                log("yesterdayDataTest: " + yesterdayDataTest1 + " | " + myusername);
+            }
+
             // account 2 (other than the account 1)
             if (todayData[3].value == null && manualFixData == true) // null means it has no revenue from the server
             {
                 log("manually set today");
 
-                document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText = Math.floor(cumulative);
+                document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText = Math.round(cumulative);
 
-                dataHM.set("Today_" + myusername, Math.floor(cumulative));
+                dataHM.set("Today_" + myusername, Math.round(cumulative));
 
                 var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
 
@@ -2776,15 +2788,15 @@
                 let currentIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 1; // get yesterday
                 let yesterdayIndexTemp = thisMonthDataDetailChat.data.datasets[0].data.length - 2; // get 2 days ago
                 let yesterdayDataTemp = thisMonthDataDetailChat.data.datasets[0].data[yesterdayIndexTemp];
-                log("yesterdayDataTemp: " + yesterdayDataTemp);
+                log("yesterdayDataTest: " + yesterdayDataTemp);
 
-                document.getElementById("mainValueDiv2_Today" + "_" + myusername).innerText = Math.floor(yesterdayDataTemp) || "-";
+                document.getElementById("mainValueDiv2_Today" + "_" + myusername).innerText = Math.round(yesterdayDataTemp) || "-";
 
 
-                dataHM.set("Yesterday_" + myusername, Math.floor(yesterdayDataTemp) || 0);
+                dataHM.set("Yesterday_" + myusername, Math.round(yesterdayDataTemp) || 0);
 
                 /// set data to chart manually
-                thisMonthDataDetailChat.data.datasets[0].data[currentIndexTemp] = Math.floor(cumulative); // Update value for 'B'
+                thisMonthDataDetailChat.data.datasets[0].data[currentIndexTemp] = Math.round(cumulative); // Update value for 'B'
                 thisMonthDataDetailChat.update();
 
 
@@ -3306,16 +3318,26 @@
                 divYesterdayTotal.className = "mainValueClass2";
                 divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); margin-top: 1px";
 
+                const divHighestTime = document.createElement('div');
+                divHighestTime.id = "divTotal_HighestTime";
+                divHighestTime.innerHTML = "";
+                divHighestTime.style = "font-size: 0.16em; color: #aaa; letter-spacing: 1px; margin-bottom: 6px;";
+
                 const divHighestTotal = document.createElement('div');
                 divHighestTotal.id = "divTotal_Highest";
                 divHighestTotal.innerHTML = "-";
                 divHighestTotal.className = "mainValueClass2";
-                divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2; margin-top: 22px;";
+                divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2;";
+
+                const divHighestGroup = document.createElement('div');
+                divHighestGroup.style = "display: flex; flex-direction: column; align-items: center; margin-top: 20px;";
+                divHighestGroup.appendChild(divHighestTime);
+                divHighestGroup.appendChild(divHighestTotal);
 
                 const divRightColumn = document.createElement('div');
 
                 divRightColumn.appendChild(divYesterdayTotal);
-                divRightColumn.appendChild(divHighestTotal);
+                divRightColumn.appendChild(divHighestGroup);
 
                 divTodayLayout.appendChild(divTodayTotal);
                 divTodayLayout.appendChild(divRightColumn);
@@ -3567,6 +3589,8 @@
             // one-time fetch highest revenue
             fetch(url + '/getHighestRevenue').then(res => res.json()).then(data => {
                 document.getElementById('divTotal_Highest').innerHTML = data.highest;
+
+                document.getElementById('divTotal_HighestTime').innerHTML = data.time;
             });
 
             let accountSelected = getSavedAccounts();

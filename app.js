@@ -199,13 +199,13 @@ app.get('/getAllUsername', cors(corsOptions), async function (req, res) {
 
 
 
-function getHighestRevenueByUsername_previousmonth(username)
-{
+function getHighestRevenueByUsername_previousmonth(username) {
     return new Promise(async (resolve, reject) => {
         const query = 'SELECT json FROM datapreviousmonth WHERE username = $1 order by vindex desc limit 3';
         const result = await pool.query(query, [username]);
         const jsonRows = result.rows;
         let highestRevenue = 0;
+        let highestTime = '';
 
         for (let j = 0; j < jsonRows.length; j++) {
             let dailyEntries = JSON.parse(jsonRows[j].json);
@@ -213,15 +213,32 @@ function getHighestRevenueByUsername_previousmonth(username)
                 let netRevenue = parseFloat(dailyEntries[k].netRevenue) || 0;
                 if (netRevenue > highestRevenue) {
                     highestRevenue = netRevenue;
+                    highestTime = dailyEntries[k].time || '';
+
+
                 }
             }
         }
-        resolve(highestRevenue);
+
+        //  log(highestRevenue + " | " + highestTime);
+        resolve({ highest: highestRevenue, time: highestTime });
     });
 }
 
-function getHighestRevenueByUsername_currentmonth(username)
-{
+function getHighestRevenueDailyByUsernameAndDate(username, dateonly) {
+    return new Promise(async (resolve, reject) => {
+        const query = 'SELECT json FROM datadaily WHERE dateonly = $1 AND username = $2';
+        const result = await pool.query(query, [dateonly, username]);
+        let totalSavingsRM = 0;
+        for (let i = 0; i < result.rows.length; i++) {
+            let entry = JSON.parse(result.rows[i].json);
+            totalSavingsRM += parseFloat(entry.savingsRM) || 0;
+        }
+        resolve({ totalSavingsRM: Math.round(totalSavingsRM * 100) / 100 });
+    });
+}
+
+function getHighestRevenueByUsername_currentmonth(username) {
     return new Promise(async (resolve, reject) => {
         const now = new Date();
         const monthyear = String(now.getMonth() + 1).padStart(2, '0') + String(now.getFullYear());
@@ -229,6 +246,7 @@ function getHighestRevenueByUsername_currentmonth(username)
         const result = await pool.query(query, [username, monthyear]);
         const jsonRows = result.rows;
         let highestRevenue = 0;
+        let highestTime = '';
 
         //log(jsonRows);
 
@@ -238,10 +256,15 @@ function getHighestRevenueByUsername_currentmonth(username)
                 let netRevenue = parseFloat(dailyEntries[k].netRevenue) || 0;
                 if (netRevenue > highestRevenue) {
                     highestRevenue = netRevenue;
+                    highestTime = dailyEntries[k].time || '';
+
+
                 }
             }
         }
-        resolve(highestRevenue);
+
+        //  log(highestRevenue + " | " + highestTime);
+        resolve({ highest: highestRevenue, time: highestTime });
     });
 }
 
@@ -595,6 +618,7 @@ app.get(function (req, res) {
     res.sendFile(app.get('appPath') + '/index.html');
 });
 
+// get highest revenue from all months data
 app.get('/getHighestRevenue', cors(corsOptions), async function (req, res) {
     const [previousMonth1, previousMonth2, currentMonth1, currentMonth2] = await Promise.all([
         getHighestRevenueByUsername_previousmonth("tgrsolar@teckguan.com"),
@@ -603,12 +627,30 @@ app.get('/getHighestRevenue', cors(corsOptions), async function (req, res) {
         getHighestRevenueByUsername_currentmonth("tgrsolar1@teckguan.com")
     ]);
 
-    let previousMonthTotal = previousMonth1 + previousMonth2;
-    let currentMonthTotal = currentMonth1 + currentMonth2;
-    let highest = parseFloat(Math.max(previousMonthTotal, currentMonthTotal).toFixed(0));
+    let previousMonthTotal = previousMonth1.highest + previousMonth2.highest;
+    let currentMonthTotal = currentMonth1.highest + currentMonth2.highest;
+
+    // round half up, then round to nearest integer
+    // 366.855 -> 367
+    let highest = parseFloat(Math.max(previousMonthTotal, currentMonthTotal));
+    highest = Math.round(highest).toFixed(0);
+
+    let time = previousMonthTotal >= currentMonthTotal ? previousMonth1.time : currentMonth1.time;
+    if (time) {
+        const months = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+        const [dd, mmm, yyyy] = time.split('/');
+        time = `${dd}/${months[mmm] || mmm}/${yyyy}`;
+    }
+
+    ///
+    //let daily1 = await getHighestRevenueDailyByUsernameAndDate('tgrsolar@teckguan.com', '09042026');
+    //let daily2 = await getHighestRevenueDailyByUsernameAndDate('tgrsolar1@teckguan.com', '09042026');
+    //let dailyTotal = daily1.totalSavingsRM + daily2.totalSavingsRM;
+
+    //log(daily1.totalSavingsRM + " | " + daily2.totalSavingsRM + " | " + dailyTotal);
 
     // res.send({ previousMonthTotal, currentMonthTotal, highest });
-    res.send({  highest });
+    res.send({ highest, time });
 });
 
 //ignore all not found pages
@@ -619,7 +661,7 @@ app.use((req, res, next) => {
 appServer.listen(port, async function () {
 
     console.log("server started");
-    
+
 
 
 });
