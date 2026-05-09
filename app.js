@@ -225,6 +225,22 @@ function getHighestRevenueByUsername_previousmonth(username) {
     });
 }
 
+
+
+function getLastUpdateTimeByUsername(username) {
+    return new Promise(async (resolve, reject) => {
+        let dateonly = moment().utc().add(8, 'hours').format("DDMMYYYY");
+
+        const query = 'SELECT * FROM datadaily WHERE dateonly = $1 AND username = $2 order by vindex desc limit 1';
+        const result = await pool.query(query, [dateonly, username]);
+
+        // also return in utc + 8
+        let datetime = result.rows[0].datetime;
+        let datetime_utc8 = moment(datetime).utc().add(8, 'hours').format("YYYY-MM-DD HH:mm:ss");
+        resolve({ datetime: datetime, datetime_utc8: datetime_utc8 });
+    });
+}
+
 function getHighestRevenueDailyByUsernameAndDate(username, dateonly) {
     return new Promise(async (resolve, reject) => {
         const query = 'SELECT json FROM datadaily WHERE dateonly = $1 AND username = $2';
@@ -578,6 +594,12 @@ app.get('/getUsernameInfo', cors(corsOptions), async function (req, res) {
     res.send(result.rows);
 });
 
+app.get('/getLastUpdateTime/:myusername', cors(corsOptions), async function (req, res) {
+    let myusername = req.params.myusername;
+    let result = await getLastUpdateTimeByUsername(myusername);
+    res.send(result);
+});
+
 ////////////
 var midnight = "0:00:00";
 // var midnight = "13:51:25";
@@ -662,6 +684,9 @@ appServer.listen(port, async function () {
 
     console.log("server started");
 
+
+    //let test = await getLastUpdateTimeByUsername("tgrsolar@teckguan.com");
+    //log(test);
 
 
 });

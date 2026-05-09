@@ -1035,6 +1035,21 @@
         let dataHM = new Map();
 
 
+        async function getLastUpdateTime(username) {
+            try {
+                let response = await fetch('/getLastUpdateTime/' + encodeURIComponent(username));
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const data = await response.json();
+                return new Date(data.datetime_utc8);
+            } catch (error) {
+                console.error('getLastUpdateTime error:', error);
+                return null;
+            }
+        }
+
+
         async function refetchDataAll(accounts) {
             return new Promise(async (resolve, reject) => {
                 try {
@@ -1045,6 +1060,12 @@
                     let totalYesterday = 0;
 
                     for (const obj of accounts) {
+                        //http://127.0.0.1:40555/getLastUpdateTime/tgrsolar@teckguan.com
+
+
+                        // set the background color to transparent
+                        document.querySelectorAll(".net-revenue.net-revenue-today").forEach(el => el.style.backgroundColor = "transparent");
+
                         accountSettings.set("requestRainDataOnce_" + obj.username, false);
                         //log("test: " + "requestRainDataOnce_" + obj.username);
 
@@ -1087,6 +1108,9 @@
                         if (isBlank(getYesterday) == false) {
                             totalYesterday = totalYesterday + parseFloat(getYesterday);
                         }
+
+                        ///
+
                     }
 
                     $("#divTodayTotal_Today").text(Math.round(totalToday));
@@ -1194,6 +1218,24 @@
                     // }, 500); // 500 milliseconds = 5 seconds
 
                     startRainAnimation();
+
+                    // check the last update time of all accounts
+                    for (const obj of accounts) {
+                        let lastUpdateTime = await getLastUpdateTime(obj.username);
+                        if (lastUpdateTime === null) continue;
+                        //compare to current time
+                        let currentTime = new Date();
+                        let diff = currentTime - lastUpdateTime;
+                        let diffInMinutes = diff / 60000;
+                        log("diffInMinutes: " + diffInMinutes + " | " + obj.username);
+
+                        // if more than 15 minutes, highlight this account
+                        if (diffInMinutes > 15) {
+                            // make the div class="net-revenue net-revenue-today" background color red #db0000
+                            document.querySelectorAll(".net-revenue.net-revenue-today").forEach(el => el.style.backgroundColor = "#db0000");
+
+                        }
+                    }
 
 
                     resolve("");
@@ -3321,13 +3363,13 @@
                 const divHighestTime = document.createElement('div');
                 divHighestTime.id = "divTotal_HighestTime";
                 divHighestTime.innerHTML = "";
-                divHighestTime.style = "font-size: 0.16em; color: #aaa; letter-spacing: 1px; margin-bottom: 6px;";
+                divHighestTime.style = "font-size: 0.16em; color: #aaa; letter-spacing: 1px; margin-bottom: -20px;";
 
                 const divHighestTotal = document.createElement('div');
                 divHighestTotal.id = "divTotal_Highest";
                 divHighestTotal.innerHTML = "-";
                 divHighestTotal.className = "mainValueClass2";
-                divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2;";
+                divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2; margin-top: 0;";
 
                 const divHighestGroup = document.createElement('div');
                 divHighestGroup.style = "display: flex; flex-direction: column; align-items: center; margin-top: 20px;";
