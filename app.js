@@ -234,6 +234,8 @@ function getLastUpdateTimeByUsername(username) {
         const query = 'SELECT * FROM datadaily WHERE dateonly = $1 AND username = $2 order by vindex desc limit 1';
         const result = await pool.query(query, [dateonly, username]);
 
+        if (result.rows.length === 0) return resolve({ datetime: null, datetime_utc8: null });
+
         // also return in utc + 8
         let datetime = result.rows[0].datetime;
         let datetime_utc8 = moment(datetime).utc().add(8, 'hours').format("YYYY-MM-DD HH:mm:ss");

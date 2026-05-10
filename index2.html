@@ -1288,6 +1288,8 @@
                 let todayDate = moment().format('DDMMYYYY');
                 dailyDataDetailValue = await getDailyData(todayDate, null, myusername);
 
+
+
                 if (isBlank(dailyDataDetailValue) == true) {
                     // daily has no data, do nothing
                 }
@@ -2350,7 +2352,7 @@
                 return h * 60 + m;
             }
             function fromMinutes(min) {
-                let h = Math.round(min / 60);
+                let h = Math.floor(min / 60);
                 let m = min % 60;
                 return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
             }

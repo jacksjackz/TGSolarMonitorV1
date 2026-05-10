@@ -1,0 +1,14 @@
+services:
+  tgsolarmonitor:
+    build: .
+    container_name: tgsolarmonitor
+    restart: always
+    ports:
+      - "40555:40555"
+    mem_limit: 1024m
+    networks:
+      - tgappsnetwork
+
+networks:
+  tgappsnetwork:
+    external: true

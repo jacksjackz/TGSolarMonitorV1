@@ -26,6 +26,16 @@ scp app.js tgapps_admin@tgapps.synology.me:/volume1/TGAPPS/Server/tgsolarmonitor
 sudo docker build -t tgsolarmonitor . && sudo docker stop tgsolarmonitor && sudo docker rm -f tgsolarmonitor && sudo docker create --name tgsolarmonitor --network=tgappsnetwork --restart=always -p 40555:40555 tgsolarmonitor && sudo docker start tgsolarmonitor
 
 
+// new (one liner)
+sudo docker-compose up -d --build
+
+// remove and add
+sudo docker rm -f tgsolarmonitor
+sudo docker-compose up -d --build
+
+// overwrite old one
+sudo docker-compose up -d --build --force-recreate
+
 // remove
 sudo docker rm -f tgsolarmonitor
 
