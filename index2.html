@@ -1231,8 +1231,8 @@
 
                         // if more than 15 minutes, highlight this account
                         if (diffInMinutes > 15) {
-                            // make the div class="net-revenue net-revenue-today" background color red #db0000
-                            document.querySelectorAll(".net-revenue.net-revenue-today").forEach(el => el.style.backgroundColor = "#db0000");
+                            // highlight only this account's net-revenue-today div red #db0000
+                            document.querySelectorAll(`.net-revenue.net-revenue-today[data-username="${obj.username}"]`).forEach(el => el.style.backgroundColor = "#db0000");
 
                         }
                     }
@@ -1399,6 +1399,7 @@
                             if (section.label === 'Today') {
                                 if (isNew) {
                                     netRevenue.className = 'net-revenue net-revenue-today';
+                                    netRevenue.dataset.username = myusername;
                                     energyBlock.className = 'energy-block energy-block-today';
 
                                     installType.className = "installTypeClass";

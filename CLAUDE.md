@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TG Solar Monitor is a solar energy monitoring dashboard for tracking PV (photovoltaic) generation, grid usage, and revenue from solar installations in Malaysia (using TNB commercial rate ~RM0.37/kWh). It consists of a Node.js/Express API server backed by PostgreSQL, multiple HTML dashboard frontends, and browser console scripts that scrape data from a third-party solar monitoring portal.
+TG Solar Monitor is a solar energy monitoring dashboard for tracking PV (photovoltaic) generation, grid usage, and revenue from solar installations in Malaysia (using TNB commercial rate ~RM0.4460/kWh). It consists of a Node.js/Express API server backed by PostgreSQL, multiple HTML dashboard frontends, and browser console scripts that scrape data from a third-party solar monitoring portal.
 
 ## Running the Application
 
