@@ -3668,10 +3668,18 @@
 
                         if (refreshCount % 30 == 0) // every 30 minutes, refetch all data
                         {
-                            let usernameInfo = await getUsernameInfo();
-
-                            if (usernameInfo != "")
+                            try {
+                                // race against a timeout: getUsernameInfo() can hang forever
+                                // if its fetch throws inside the async promise executor
+                                await Promise.race([
+                                    getUsernameInfo(),
+                                    new Promise(resolve => setTimeout(resolve, 10000))
+                                ]);
+                            } catch (err) {
+                                console.log(err);
+                            } finally {
                                 location.reload();
+                            }
                         }
                         else {
                             await refetchDataAll(accountSelected);
