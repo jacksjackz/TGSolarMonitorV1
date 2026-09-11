@@ -502,6 +502,38 @@
             url = "http://127.0.0.1:40555"; // 
         }
 
+        // Reload guard: ping the server first so we never throw away a working
+        // page when the server / network is down. Retries a few times, then gives up.
+        const serverTimeUrl = "https://tgapps.synology.me:40556/getServerTime";
+
+        async function safeReload(attempt = 1) {
+            const maxAttempts = 3;
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(serverTimeUrl + "?t=" + Date.now(), {
+                    cache: "no-store",
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok == false) {
+                    throw new Error("getServerTime returned " + response.status);
+                }
+
+                location.reload();
+            } catch (err) {
+                console.log("safeReload: server not reachable, reload skipped (attempt " + attempt + " of " + maxAttempts + ") - " + err);
+
+                if (attempt < maxAttempts) {
+                    setTimeout(function () { safeReload(attempt + 1); }, 5000);
+                }
+            }
+        }
+
         async function getSolarData(apiName, chartType, myusername) {
 
             return new Promise(async (resolve, reject) => {
@@ -1076,13 +1108,13 @@
                                         saveAccounts();
 
 
-                                        location.reload();
+                                        safeReload();
                                     }
                                 }
                                 else {
 
 
-                                    location.reload();
+                                    safeReload();
                                 }
 
                                 //log(accountSelected[0].username);
@@ -2270,7 +2302,7 @@
 
                         if (refreshCount % 30 == 0) // every 30 minutes, refetch all data
                         {
-                            location.reload();
+                            safeReload();
                         }
                         else {
                             await refetchDataAll(accountSelected);

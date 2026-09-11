@@ -407,6 +407,38 @@
 
     <script>
 
+        // Reload guard: ping the server first so we never throw away a working
+        // page when the server / network is down. Retries a few times, then gives up.
+        const serverTimeUrl = "https://tgapps.synology.me:40556/getServerTime";
+
+        async function safeReload(attempt = 1) {
+            const maxAttempts = 3;
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(serverTimeUrl + "?t=" + Date.now(), {
+                    cache: "no-store",
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok == false) {
+                    throw new Error("getServerTime returned " + response.status);
+                }
+
+                location.reload();
+            } catch (err) {
+                console.log("safeReload: server not reachable, reload skipped (attempt " + attempt + " of " + maxAttempts + ") - " + err);
+
+                if (attempt < maxAttempts) {
+                    setTimeout(function () { safeReload(attempt + 1); }, 5000);
+                }
+            }
+        }
+
         const deployPublic = true; // public = true, local = false
 
         const dataIntervalRefresh = 60000; // 60 seconds
@@ -1373,14 +1405,14 @@
 
         // Add refresh on click for SOC text
         document.getElementById('soc-text').addEventListener('click', function () {
-            location.reload();
+            safeReload();
         });
 
         // Initialize date nav UI
         updateDateNavUI();
 
         // Auto-reload page every 30 minutes
-        setTimeout(() => location.reload(), 30 * 60 * 1000);
+        setTimeout(() => safeReload(), 30 * 60 * 1000);
     </script>
 </body>
 
