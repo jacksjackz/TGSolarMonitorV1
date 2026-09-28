@@ -1,0 +1,44 @@
+services:
+  agriloginserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agriloginserver
+    container_name: agriloginserver
+    restart: always
+    ports:
+      - "8883:8883"
+    networks:
+      - tgappsnetwork
+    environment:
+      # Internal container-to-container path on tgappsnetwork.
+      # postgrestgapps publishes 8888->5432, so from INSIDE the network we use
+      # the container name + its internal port 5432 (the public 8888 endpoint
+      # fails from inside the container due to Synology NAT hairpin).
+      DB_HOST: postgrestgapps
+      DB_PORT: "5432"
+      # Override the public URL baked into application.properties so the app
+      # connects over the internal path too. Env vars win over the bundled
+      # file, so no jar rebuild is needed.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgrestgapps:5432/agrilogin
+    # Replace the Dockerfile's ENTRYPOINT: wait until Postgres accepts TCP
+    # connections, then hand off to the app. `exec` keeps java as PID 1.
+    entrypoint:
+      - /bin/bash
+      - -c
+      # NOTE: $$ escapes Compose's own ${..} interpolation so the literal $
+      # reaches the shell and the env vars are expanded at runtime.
+      - |
+        echo "Waiting for Postgres at $${DB_HOST}:$${DB_PORT} ...";
+        until bash -c "echo > /dev/tcp/$${DB_HOST}/$${DB_PORT}" 2>/dev/null; do
+          echo "  Postgres not ready - retrying in 2s";
+          sleep 2;
+        done;
+        echo "Postgres is up - starting AgriLogin";
+        exec java -jar /app.jar
+
+networks:
+  # This network is created outside compose (docker network create tgappsnetwork).
+  # "external: true" tells compose to attach to it rather than create/manage it.
+  tgappsnetwork:
+    external: true

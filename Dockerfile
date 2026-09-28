@@ -16,5 +16,6 @@ COPY . .
 # port
 EXPOSE 40555
 
-# Set the command to run when the container starts
-CMD [ "node", "app.js" ]
+# Wait until Postgres accepts TCP connections, then start the app.
+# `exec` replaces the shell so node runs as PID 1 and receives stop signals.
+CMD [ "sh", "-c", "node wait-for-db.js && exec node app.js" ]
