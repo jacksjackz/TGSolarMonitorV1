@@ -3,9 +3,29 @@ services:
     build: .
     container_name: tgsolarmonitor
     restart: always
-    ports:
-      - "40555:40555"
+    # No host port any more - nginx below owns 40555 and proxies to this
+    # container over tgappsnetwork.
+    expose:
+      - "40555"
     mem_limit: 1024m
+    networks:
+      - tgappsnetwork
+
+  tgsolarmonitor-nginx:
+    image: nginx:alpine
+    container_name: tgsolarmonitor-nginx
+    restart: always
+    depends_on:
+      - tgsolarmonitor
+    ports:
+      - "40555:80"
+    volumes:
+      # Project folder on the NAS, read-only. nginx serves index2.html,
+      # css/, js/ and res/ straight from here (see nginx/default.conf),
+      # so replacing those files needs no rebuild.
+      - ./:/srv/tgsolar:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    mem_limit: 64m
     networks:
       - tgappsnetwork
 

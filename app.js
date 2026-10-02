@@ -130,6 +130,10 @@ var pool = new Pool(postgres_credentials);
     let table4 = "CREATE TABLE IF NOT EXISTS accounts  ( vindex BIGSERIAL PRIMARY KEY, username TEXT, description text);";
     await pool.query(table4);
 
+    // password + location are used by /getAllUNP and the admin page
+    let table4_columns = "ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password text, ADD COLUMN IF NOT EXISTS location text;";
+    await pool.query(table4_columns);
+
 
 
 
@@ -596,6 +600,104 @@ app.get('/getUsernameInfo', cors(corsOptions), async function (req, res) {
     res.send(result.rows);
 });
 
+//////////// admin - maintain accounts table (same-origin only, no cors)
+const ADMIN_PASSWORD = "admin123";
+const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const adminTokens = new Map(); // token -> expiry time (ms)
+
+function requireAdmin(req, res, next) {
+    const token = req.get('x-admin-token');
+    const expiry = token ? adminTokens.get(token) : null;
+
+    if (!expiry || expiry < Date.now()) {
+        if (token) adminTokens.delete(token);
+        return res.status(401).json({ error: "Not logged in" });
+    }
+    next();
+}
+
+app.post('/adminLogin', async (req, res) => {
+    const password = req.body.formData?.password;
+
+    if (password !== ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Wrong password" });
+    }
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    adminTokens.set(token, Date.now() + ADMIN_TOKEN_TTL_MS);
+    res.json({ token });
+});
+
+app.post('/adminLogout', async (req, res) => {
+    const token = req.get('x-admin-token');
+    if (token) adminTokens.delete(token);
+    res.json({ ok: true });
+});
+
+app.get('/adminGetAccounts', requireAdmin, async function (req, res) {
+    try {
+        const result = await pool.query("SELECT vindex, username, description, password, location FROM accounts ORDER BY vindex ASC");
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: "Database Error", detail: err.message });
+    }
+});
+
+app.post('/adminAddAccount', requireAdmin, async (req, res) => {
+    const { username, description, password, location } = req.body.formData || {};
+
+    if (isBlank(username)) {
+        return res.status(400).json({ error: "username is required" });
+    }
+
+    try {
+        const query = "INSERT INTO accounts (username, description, password, location) VALUES ($1, $2, $3, $4) RETURNING *;";
+        const result = await pool.query(query, [username.trim(), description, password, location]);
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: "Database Error", detail: err.message });
+    }
+});
+
+app.post('/adminUpdateAccount', requireAdmin, async (req, res) => {
+    const { vindex, username, description, password, location } = req.body.formData || {};
+
+    if (isBlank(vindex) || isBlank(username)) {
+        return res.status(400).json({ error: "vindex and username are required" });
+    }
+
+    try {
+        const query = "UPDATE accounts SET username = $1, description = $2, password = $3, location = $4 WHERE vindex = $5 RETURNING *;";
+        const result = await pool.query(query, [username.trim(), description, password, location, vindex]);
+
+        if (result.rowCount == 0) {
+            return res.status(404).json({ error: "Account not found" });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: "Database Error", detail: err.message });
+    }
+});
+
+app.post('/adminDeleteAccount', requireAdmin, async (req, res) => {
+    const vindex = req.body.formData?.vindex;
+
+    if (isBlank(vindex)) {
+        return res.status(400).json({ error: "vindex is required" });
+    }
+
+    try {
+        const result = await pool.query("DELETE FROM accounts WHERE vindex = $1;", [vindex]);
+
+        if (result.rowCount == 0) {
+            return res.status(404).json({ error: "Account not found" });
+        }
+        res.json({ ok: true });
+    } catch (err) {
+        res.status(500).json({ error: "Database Error", detail: err.message });
+    }
+});
+
 app.get('/getLastUpdateTime/:myusername', cors(corsOptions), async function (req, res) {
     let myusername = req.params.myusername;
     let result = await getLastUpdateTimeByUsername(myusername);
@@ -634,6 +736,16 @@ app.get('/index2', function (req, res) {
 
 app.get('/index3', function (req, res) {
     var path = __dirname + "/index3.html";
+    res.sendFile(path);
+});
+
+app.get('/index4', function (req, res) {
+    var path = __dirname + "/index4.html";
+    res.sendFile(path);
+});
+
+app.get('/admin', function (req, res) {
+    var path = __dirname + "/admin.html";
     res.sendFile(path);
 });
 

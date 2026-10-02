@@ -42,3 +42,22 @@ sudo docker rm -f tgsolarmonitor
 
 #### test
 sudo docker create --name test123 --network=tgappsnetwork --restart=always -p 40555:40555 --memory=512m tgsolarmonitor
+
+
+==================== nginx front (index2.html hot-replace)
+// nginx (tgsolarmonitor-nginx) now owns host port 40555 and serves index2.html, index4.html, css/, js/, res/
+// straight from this folder (bind mount). Everything else is proxied to the node container.
+
+// first time only: copy docker-compose.yml + nginx/ folder, remove old standalone container, then:
+sudo docker rm -f tgsolarmonitor
+sudo docker-compose up -d --build
+
+// update index2.html / index4.html -> just copy it, then refresh the browser. no docker command needed.
+scp index2.html tgapps_admin@tgapps.synology.me:/volume1/TGAPPS/Server/tgsolarmonitor/
+scp index4.html tgapps_admin@tgapps.synology.me:/volume1/TGAPPS/Server/tgsolarmonitor/
+
+// app.js changed -> rebuild node only (nginx keeps running)
+sudo docker-compose up -d --build tgsolarmonitor
+
+// nginx/default.conf changed -> reload nginx
+sudo docker exec tgsolarmonitor-nginx nginx -s reload

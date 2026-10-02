@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="res/favicon.png" type="image/png">
+    <title>TG Solar Admin</title>
+
+    <style>
+        :root {
+            --bg: #000;
+            --panel: #141414;
+            --panel-2: #1d1d1d;
+            --border: #333;
+            --text: #e8e8e8;
+            --muted: #8a8a8a;
+            --accent: #00c853;
+            --accent-hover: #00a344;
+            --danger: #e53935;
+            --danger-hover: #c62828;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px 16px;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        button {
+            font: inherit;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        button:hover {
+            border-color: #555;
+        }
+
+        button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            font-weight: bold;
+        }
+
+        button.primary:hover {
+            background: var(--accent-hover);
+        }
+
+        button.danger {
+            background: transparent;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        button.danger:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        input {
+            font: inherit;
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        label {
+            display: block;
+            font-size: 0.85em;
+            color: var(--muted);
+            margin: 12px 0 4px;
+        }
+
+        .error {
+            color: var(--danger);
+            font-size: 0.9em;
+            min-height: 1.2em;
+            margin-top: 10px;
+        }
+
+        /* login */
+        #loginView {
+            max-width: 340px;
+            margin: 12vh auto 0;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px 24px;
+        }
+
+        #loginView h1 {
+            margin: 0 0 4px;
+            font-size: 1.4em;
+        }
+
+        #loginView p {
+            margin: 0 0 8px;
+            color: var(--muted);
+            font-size: 0.9em;
+        }
+
+        #loginView button {
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        /* main */
+        #mainView {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .topbar h1 {
+            margin: 0;
+            font-size: 1.4em;
+        }
+
+        .topbar .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .table-wrap {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        th {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            background: var(--panel-2);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        td.desc {
+            white-space: normal;
+            min-width: 160px;
+        }
+
+        td.row-actions {
+            text-align: right;
+        }
+
+        td.row-actions button {
+            padding: 5px 12px;
+            margin-left: 6px;
+        }
+
+        .pw {
+            font-family: monospace;
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 28px;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: var(--muted);
+            min-height: 1.2em;
+        }
+
+        /* modal */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 420px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 22px 22px 18px;
+        }
+
+        .modal h2 {
+            margin: 0 0 4px;
+            font-size: 1.2em;
+        }
+
+        .modal .buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- login -->
+    <form id="loginView" class="hidden">
+        <h1>TG Solar Admin</h1>
+        <p>Enter the admin password to continue.</p>
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" autofocus>
+        <button type="submit" class="primary" id="btnLogin">Log in</button>
+        <div class="error" id="loginError"></div>
+    </form>
+
+    <!-- accounts -->
+    <div id="mainView" class="hidden">
+        <div class="topbar">
+            <h1>Accounts</h1>
+            <div class="actions">
+                <button id="btnRefresh">Refresh</button>
+                <button class="primary" id="btnAdd">+ Add account</button>
+                <button id="btnLogout">Log out</button>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Username</th>
+                        <th>Description</th>
+                        <th>Password</th>
+                        <th>Location</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="accountsBody"></tbody>
+            </table>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <!-- add / edit -->
+    <div class="overlay hidden" id="editOverlay">
+        <form class="modal" id="editForm">
+            <h2 id="editTitle">Add account</h2>
+            <input type="hidden" id="editVindex">
+            <label for="editUsername">Username *</label>
+            <input type="text" id="editUsername" autocomplete="off">
+            <label for="editDescription">Description</label>
+            <input type="text" id="editDescription" autocomplete="off">
+            <label for="editPassword">Password</label>
+            <input type="text" id="editPassword" autocomplete="off">
+            <label for="editLocation">Location</label>
+            <input type="text" id="editLocation" autocomplete="off" placeholder="e.g. TGBUNGALOW">
+            <div class="error" id="editError"></div>
+            <div class="buttons">
+                <button type="button" id="btnEditCancel">Cancel</button>
+                <button type="submit" class="primary" id="btnEditSave">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- delete confirm -->
+    <div class="overlay hidden" id="deleteOverlay">
+        <div class="modal">
+            <h2>Delete account?</h2>
+            <p id="deleteText" style="color: var(--muted); margin: 8px 0 0;"></p>
+            <div class="error" id="deleteError"></div>
+            <div class="buttons">
+                <button type="button" id="btnDeleteCancel">Cancel</button>
+                <button type="button" class="danger" id="btnDeleteConfirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const testLocalServer = false; // @@@
+
+        let url = ""; // same server that serves this page
+
+        if (testLocalServer == true) {
+            url = "http://127.0.0.1:40555";
+        }
+
+        const TOKEN_KEY = "tgsolar_admin_token";
+
+        let accounts = [];
+        let deleteVindex = null;
+
+        const $ = id => document.getElementById(id);
+
+        function getToken() {
+            try { return sessionStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+        }
+
+        function setToken(token) {
+            try {
+                if (token) sessionStorage.setItem(TOKEN_KEY, token);
+                else sessionStorage.removeItem(TOKEN_KEY);
+            } catch (e) { }
+        }
+
+        let memoryToken = getToken();
+
+        async function api(method, path, formData) {
+            const options = {
+                method: method,
+                headers: { 'x-admin-token': memoryToken || '' }
+            };
+
+            if (formData) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify({ formData: formData });
+            }
+
+            const response = await fetch(url + path, options);
+            let data = null;
+            try { data = await response.json(); } catch (e) { }
+
+            if (response.status == 401 && path != '/adminLogin') {
+                showLogin("Session expired, please log in again.");
+                throw new Error("Not logged in");
+            }
+
+            if (!response.ok) {
+                throw new Error((data && (data.detail || data.error)) || ("HTTP " + response.status));
+            }
+
+            return data;
+        }
+
+        function showLogin(message) {
+            memoryToken = null;
+            setToken(null);
+            closeModals();
+            $('mainView').classList.add('hidden');
+            $('loginView').classList.remove('hidden');
+            $('loginError').textContent = message || '';
+            $('loginPassword').value = '';
+            $('loginPassword').focus();
+        }
+
+        function showMain() {
+            $('loginView').classList.add('hidden');
+            $('mainView').classList.remove('hidden');
+            loadAccounts();
+        }
+
+        function setStatus(msg) {
+            $('status').textContent = msg;
+        }
+
+        // login
+        $('loginView').addEventListener('submit', async e => {
+            e.preventDefault();
+            $('loginError').textContent = '';
+            $('btnLogin').disabled = true;
+
+            try {
+                const data = await api('POST', '/adminLogin', { password: $('loginPassword').value });
+                memoryToken = data.token;
+                setToken(data.token);
+                showMain();
+            } catch (err) {
+                $('loginError').textContent = err.message;
+            } finally {
+                $('btnLogin').disabled = false;
+            }
+        });
+
+        $('btnLogout').addEventListener('click', async () => {
+            try { await api('POST', '/adminLogout'); } catch (e) { }
+            showLogin();
+        });
+
+        // list
+        async function loadAccounts() {
+            setStatus("Loading...");
+            try {
+                accounts = await api('GET', '/adminGetAccounts');
+                renderAccounts();
+                setStatus(accounts.length + " account(s) - loaded " + new Date().toLocaleTimeString());
+            } catch (err) {
+                setStatus("Failed to load: " + err.message);
+            }
+        }
+
+        function cell(tr, text, className) {
+            const td = document.createElement('td');
+            td.textContent = text == null ? '' : text;
+            if (className) td.className = className;
+            tr.appendChild(td);
+            return td;
+        }
+
+        function renderAccounts() {
+            const body = $('accountsBody');
+            body.innerHTML = '';
+
+            if (accounts.length == 0) {
+                const tr = document.createElement('tr');
+                const td = cell(tr, "No accounts yet.", 'empty');
+                td.colSpan = 6;
+                body.appendChild(tr);
+                return;
+            }
+
+            accounts.forEach(acc => {
+                const tr = document.createElement('tr');
+                cell(tr, acc.vindex);
+                cell(tr, acc.username);
+                cell(tr, acc.description, 'desc');
+
+                // password masked, click to reveal
+                const pwTd = cell(tr, '');
+                if (acc.password) {
+                    const span = document.createElement('span');
+                    span.className = 'pw';
+                    span.title = 'Click to show / hide';
+                    span.textContent = '••••••';
+                    span.addEventListener('click', () => {
+                        const masked = span.textContent == '••••••';
+                        span.textContent = masked ? acc.password : '••••••';
+                    });
+                    pwTd.appendChild(span);
+                }
+
+                cell(tr, acc.location);
+
+                const actions = cell(tr, '', 'row-actions');
+
+                const btnEdit = document.createElement('button');
+                btnEdit.textContent = 'Edit';
+                btnEdit.addEventListener('click', () => openEdit(acc));
+                actions.appendChild(btnEdit);
+
+                const btnDelete = document.createElement('button');
+                btnDelete.textContent = 'Delete';
+                btnDelete.className = 'danger';
+                btnDelete.addEventListener('click', () => openDelete(acc));
+                actions.appendChild(btnDelete);
+
+                body.appendChild(tr);
+            });
+        }
+
+        $('btnRefresh').addEventListener('click', loadAccounts);
+
+        // add / edit
+        function openEdit(acc) {
+            $('editTitle').textContent = acc ? 'Edit account #' + acc.vindex : 'Add account';
+            $('editVindex').value = acc ? acc.vindex : '';
+            $('editUsername').value = acc ? (acc.username || '') : '';
+            $('editDescription').value = acc ? (acc.description || '') : '';
+            $('editPassword').value = acc ? (acc.password || '') : '';
+            $('editLocation').value = acc ? (acc.location || '') : '';
+            $('editError').textContent = '';
+            $('editOverlay').classList.remove('hidden');
+            $('editUsername').focus();
+        }
+
+        $('btnAdd').addEventListener('click', () => openEdit(null));
+        $('btnEditCancel').addEventListener('click', closeModals);
+
+        $('editForm').addEventListener('submit', async e => {
+            e.preventDefault();
+
+            const formData = {
+                username: $('editUsername').value.trim(),
+                description: $('editDescription').value,
+                password: $('editPassword').value,
+                location: $('editLocation').value.trim()
+            };
+
+            if (formData.username == '') {
+                $('editError').textContent = 'Username is required.';
+                return;
+            }
+
+            const vindex = $('editVindex').value;
+            $('btnEditSave').disabled = true;
+
+            try {
+                if (vindex) {
+                    formData.vindex = vindex;
+                    await api('POST', '/adminUpdateAccount', formData);
+                } else {
+                    await api('POST', '/adminAddAccount', formData);
+                }
+                closeModals();
+                await loadAccounts();
+            } catch (err) {
+                $('editError').textContent = err.message;
+            } finally {
+                $('btnEditSave').disabled = false;
+            }
+        });
+
+        // delete
+        function openDelete(acc) {
+            deleteVindex = acc.vindex;
+            $('deleteText').textContent = '#' + acc.vindex + ' ' + acc.username + ' will be removed permanently.';
+            $('deleteError').textContent = '';
+            $('deleteOverlay').classList.remove('hidden');
+        }
+
+        $('btnDeleteCancel').addEventListener('click', closeModals);
+
+        $('btnDeleteConfirm').addEventListener('click', async () => {
+            $('btnDeleteConfirm').disabled = true;
+            try {
+                await api('POST', '/adminDeleteAccount', { vindex: deleteVindex });
+                closeModals();
+                await loadAccounts();
+            } catch (err) {
+                $('deleteError').textContent = err.message;
+            } finally {
+                $('btnDeleteConfirm').disabled = false;
+            }
+        });
+
+        function closeModals() {
+            $('editOverlay').classList.add('hidden');
+            $('deleteOverlay').classList.add('hidden');
+            deleteVindex = null;
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key == 'Escape') closeModals();
+        });
+
+        // start
+        if (memoryToken) showMain();
+        else showLogin();
+    </script>
+</body>
+
+</html>
