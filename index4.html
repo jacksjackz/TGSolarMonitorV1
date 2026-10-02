@@ -670,174 +670,7 @@
         }
 
 
-        var rainPlugin;
-        var monthlyRainPlugin;
-
-        function rainSettings_Setup() {
-            let countAccount = 1
-            try {
-                let accountSaved = getSavedAccounts();
-                let jsonAccount = JSON.parse(accountSaved);
-                countAccount = jsonAccount.length;
-            }
-            catch (err) {
-                log(err);
-            }
-
-            ///////
-            const rainDrops = [];
-            const dropCount = 100; // How many drops?
-
-            let defaultSpeed = 1.5;
-
-            if (countAccount >= 2)
-                defaultSpeed = 0.5;
-
-            // Initialize drops with random positions
-            for (let i = 0; i < dropCount; i++) {
-                rainDrops.push({
-                    x: Math.random() * 800, // Random X (will be constrained by width later)
-                    y: Math.random() * 400, // Random Y
-                    speed: defaultSpeed + Math.random(), // Random falling speed
-                    length: 10 + Math.random() * 10 // Random drop length
-                });
-            }
-
-            // --- 2. THE CUSTOM PLUGIN ---
-            rainPlugin = {
-                id: 'rainEffect',
-                // 1. Update positions ONCE per frame
-                beforeDraw(chart) {
-                    const { chartArea: { top, bottom, left, width } } = chart;
-
-                    rainDrops.forEach(drop => {
-                        drop.y += drop.speed;
-                        if (drop.y > bottom) {
-                            drop.y = top;
-                            drop.x = left + Math.random() * width;
-                        }
-                    });
-                },
-                // 2. Draw the rain for specific datasets
-                beforeDatasetDraw(chart, args) {
-                    // 'args.index' tells us which dataset is currently being drawn
-                    const datasetIndex = args.index;
-                    const dataset = chart.data.datasets[datasetIndex];
-
-                    // log(dataset.label.);
-
-
-                    // only animate for rain chart
-                    if (dataset.label != 'Rain Today')
-                        return;
-
-                    // CHECK: Is it hidden?
-                    if (chart.getDatasetMeta(datasetIndex).hidden) return;
-
-                    const { ctx, chartArea: { bottom } } = chart;
-                    const meta = chart.getDatasetMeta(datasetIndex);
-                    const points = meta.data;
-
-                    ctx.save();
-                    ctx.beginPath();
-
-                    if (points.length > 0) {
-                        ctx.moveTo(points[0].x, points[0].y);
-                        for (let i = 1; i < points.length; i++) {
-                            ctx.lineTo(points[i].x, points[i].y);
-                        }
-                        ctx.lineTo(points[points.length - 1].x, bottom);
-                        ctx.lineTo(points[0].x, bottom);
-                        ctx.closePath();
-                    }
-
-                    ctx.clip(); // Mask the area
-
-                    // Draw rain
-                    ctx.strokeStyle = 'cyan';
-                    ctx.lineWidth = 10;
-
-                    rainDrops.forEach(drop => {
-                        ctx.beginPath();
-                        ctx.moveTo(drop.x, drop.y);
-                        ctx.lineTo(drop.x, drop.y + drop.length);
-                        ctx.stroke();
-                    });
-
-                    ctx.restore();
-                }
-            };
-
-            // --- 3. MONTHLY RAIN PLUGIN ---
-            monthlyRainPlugin = {
-                id: 'monthlyRainEffect',
-                // 1. Update positions ONCE per frame
-                beforeDraw(chart) {
-                    const { chartArea: { top, bottom, left, width } } = chart;
-
-                    rainDrops.forEach(drop => {
-                        drop.y += drop.speed;
-                        if (drop.y > bottom) {
-                            drop.y = top;
-                            drop.x = left + Math.random() * width;
-                        }
-                    });
-                },
-                // 2. Draw the rain for monthly rain dataset
-                beforeDatasetDraw(chart, args) {
-                    const datasetIndex = args.index;
-                    const dataset = chart.data.datasets[datasetIndex];
-
-                    //log("Monthly rain plugin - Dataset label: " + dataset.label);
-
-                    //log(dataset.label);
-
-                    // Only animate for monthly rain chart
-                    if (dataset.label != 'Rain (mm)')
-                        return;
-
-                    //log(dataset.label);
-
-                    // CHECK: Is it hidden?
-                    if (chart.getDatasetMeta(datasetIndex).hidden) return;
-
-                    const { ctx, chartArea: { bottom } } = chart;
-                    const meta = chart.getDatasetMeta(datasetIndex);
-                    const points = meta.data;
-
-                    ctx.save();
-                    ctx.beginPath();
-
-                    if (points.length > 0) {
-                        ctx.moveTo(points[0].x, points[0].y);
-                        for (let i = 1; i < points.length; i++) {
-                            ctx.lineTo(points[i].x, points[i].y);
-                        }
-                        ctx.lineTo(points[points.length - 1].x, bottom);
-                        ctx.lineTo(points[0].x, bottom);
-                        ctx.closePath();
-                    }
-
-                    ctx.clip(); // Mask the area
-
-                    // Draw rain
-                    ctx.strokeStyle = 'cyan';  // Cyan with transparency
-                    ctx.lineWidth = 10;
-
-                    rainDrops.forEach(drop => {
-                        ctx.beginPath();
-                        ctx.moveTo(drop.x, drop.y);
-                        ctx.lineTo(drop.x, drop.y + drop.length);
-                        ctx.stroke();
-                    });
-
-                    ctx.restore();
-                }
-            };
-
-        }
-
-        // --- 4. DATA LABELS PLUGIN for Daily Chart (shows values on top of line) ---
+        // --- DATA LABELS PLUGIN for Daily Chart (shows values on top of line) ---
         const dataLabelsPlugin = {
             id: 'dataLabelsPlugin',
             afterDatasetsDraw(chart) {
@@ -1098,8 +931,6 @@
                         // set the background color to transparent
                         document.querySelectorAll(".net-revenue.net-revenue-today").forEach(el => el.style.backgroundColor = "transparent");
 
-                        accountSettings.set("requestRainDataOnce_" + obj.username, false);
-                        //log("test: " + "requestRainDataOnce_" + obj.username);
 
                         await refetchData(obj.username);
 
@@ -1248,8 +1079,6 @@
                     //     if (styleTag) 
                     //         styleTag.remove();
                     // }, 500); // 500 milliseconds = 5 seconds
-
-                    startRainAnimation();
 
                     // check the last update time of all accounts
                     for (const obj of accounts) {
@@ -1619,23 +1448,12 @@
 
                 //log("b: " + thisMonthDataDetailValue);
 
-                // Fetch monthly rain data
-                let monthlyRainData = await getMonthlyRainData();
-                log("Monthly rain data fetched for chart:");
-                log(monthlyRainData);
-
-                if (thisMonthDataDetailValue != "") {
-                    loadthisMonthDetailChart(thisMonthDataDetailValue, myusername, monthlyRainData, todayData);
-                }
-                else  // first day of the month
-                {
-                    loadthisMonthDetailChart(thisMonthDataDetailValue, myusername, monthlyRainData);
-                }
+                loadthisMonthDetailChart(thisMonthDataDetailValue, myusername);
 
 
                 if (dailyDataDetailValue != "") {
                     let jsonData = dailyDataDetailValue.map(item => JSON.parse(item.json));
-                    await loadDailyDayDetailChart(jsonData, todayData, myusername, []);
+                    await loadDailyDayDetailChart(jsonData, todayData, myusername);
                 }
 
 
@@ -1829,45 +1647,6 @@
         }
 
 
-        let isAnimating = false;  // Flag to prevent multiple animation loops
-
-        function animateRain() {
-            // Update daily charts
-            for (const [key, chartEach] of thisDayDailyDataDetailChat_Map) {
-                if (chartEach) {
-                    // Only update if not hovering (to prevent tooltip lag)
-                    if (!chartEach.tooltip || !chartEach.tooltip.getActiveElements().length) {
-                        chartEach.update('none');
-                    }
-                }
-            }
-
-            // Update monthly charts for rain animation
-            for (const [key, chartEach] of thisMonthDataDetailChat_Map) {
-                if (chartEach) {
-                    // Only update if not hovering (to prevent tooltip lag)
-                    if (!chartEach.tooltip || !chartEach.tooltip.getActiveElements().length) {
-                        chartEach.update('none');
-                    }
-                }
-            }
-
-            if (isAnimating) {
-                requestAnimationFrame(animateRain);
-            }
-        }
-
-        function startRainAnimation() {
-            if (!isAnimating) {
-                isAnimating = true;
-                animateRain();
-            }
-        }
-
-        function stopRainAnimation() {
-            isAnimating = false;
-        }
-
 
         var lastMonthDataDetailChat_Map = new Map();
 
@@ -2029,7 +1808,7 @@
 
         var thisMonthDataDetailChat_Map = new Map();
 
-        function loadthisMonthDetailChart(rawData, myusername, monthlyRainData = null) {
+        function loadthisMonthDetailChart(rawData, myusername) {
 
             var thisMonthDataDetailChat = thisMonthDataDetailChat_Map.get(myusername);
 
@@ -2100,25 +1879,6 @@
 
                 //log(dataHM);
 
-                // Transform monthly rain data from object to array
-                let rainDataArray = [];
-                if (monthlyRainData && Object.keys(monthlyRainData).length > 0) {
-                    log("Processing monthly rain data:");
-                    log(monthlyRainData);
-
-                    // For each day in rawData, get corresponding rain value
-                    rainDataArray = rawData.map(item => {
-                        let dayNumber = formatDate(item.time); // Returns "01", "02", etc.
-                        let dayKey = String(parseInt(dayNumber)); // Convert "01" to "1"
-                        let rainValue = monthlyRainData[dayKey] || 0;
-                        return rainValue;
-                    });
-
-
-                    rainDataArray = processArray_RainData(rainDataArray);
-
-
-                }
 
                 //  document.getElementById("mainValueDiv_Yesterday").style = "color: #07FFB8";
                 //  document.getElementById("mainValueDiv_Last Month").style = "color: yellow";
@@ -2144,30 +1904,10 @@
                     ]
                 };
 
-                // Add rain dataset if data is available
-                if (rainDataArray.length > 0) {
-                    data.datasets.push({
-                        label: 'Rain (mm)',
-                        data: rainDataArray,
-                        borderColor: 'rgba(0, 255, 253, 0.5)',
-                        backgroundColor: 'rgba(22, 100, 100, 0.5)',
-                        type: 'line',                // Line chart overlay
-                        tension: 0.3,
-                        yAxisID: 'y-rain',           // Secondary Y-axis
-                        fill: true,
-                        pointRadius: 3,
-                        pointHoverRadius: 5,
-                        borderWidth: 2,
-                        order: 1,
-                        beginAtZero: true,
-                        borderWidth: 15, // thickness of the line: default is 3
-                    });
-                }
 
                 const chartSetup = {
                     type: 'bar',
                     data: data,
-                    plugins: [monthlyRainPlugin],  // Register the plugin HERE in the plugins array
                     options: {
                         maintainAspectRatio: false,
                         responsive: true,
@@ -2225,25 +1965,6 @@
                                     drawBorder: false,
                                 }
                             },
-                            'y-rain': {
-                                type: 'linear',
-                                position: 'left',  // Secondary Y-axis on right
-                                ticks: {
-                                    color: '#00D4FF',  // Cyan color for rain
-                                    font: {
-                                        size: 50,
-                                        family: 'Courier New'
-                                    },
-                                    maxTicksLimit: 5,
-                                    display: true,
-                                    beginAtZero: true,
-                                    padding: 5,
-                                    offset: true,
-                                    callback: function (value) {
-                                        return value + "mm";
-                                    }
-                                }
-                            }
                         }
                     }
                 };
@@ -2518,139 +2239,11 @@
             return 0;                                           // equal
         }
 
-        function getRainData() {
-
-            return new Promise(async (resolve, reject) => {
-                try {
-                    let response = await fetch("https://tgapps.synology.me:9234/api/data/getRainDataToday/63");
-                    const data = await response.json();
-                    resolve(data);
-                }
-                catch (err) {
-                    log(err);
-                }
-            });
-        }
-
-        function getMonthlyRainData() {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    // Get current month and year
-                    let currentMonth = moment().format('MM');  // e.g., "12"
-                    let currentYear = moment().format('YYYY'); // e.g., "2025"
-
-                    // Build URL with dynamic month/year
-                    let apiUrl = `https://tgapps.synology.me:9234/api/data/getFastRainDataByMonthYear/${currentMonth}/${currentYear}/63`;
-
-                    log("Fetching monthly rain data from: " + apiUrl);
-
-                    let response = await fetch(apiUrl);
-                    const data = await response.json();
-                    resolve(data);
-                }
-                catch (err) {
-                    log("Error fetching monthly rain data:");
-                    log(err);
-                    resolve([]); // Return empty array on error
-                }
-            });
-        }
-
-        function parseDateTimeRain(str) {
-            // "28/11/2025 06:00"
-            const [d, m, yAndTime] = str.split("/");
-            const [y, time] = yAndTime.split(" ");
-            return new Date(`${y}-${m}-${d}T${time}:00`);
-        }
-
-        function processArray_RainData(data) {
-            // Create a copy to avoid mutating original
-            const arr = [...data];
-
-            // Phase 1: Handle leading zeros
-            // If the array starts with zeros, we treat the start as a "gap" 
-            // and nullify everything up until the zero right before the first non-zero value.
-            let firstNonZeroIndex = -1;
-            for (let i = 0; i < arr.length; i++) {
-                if (arr[i] !== 0 && arr[i] !== null) {
-                    firstNonZeroIndex = i;
-                    break;
-                }
-            }
-
-            if (firstNonZeroIndex === -1) {
-                // Case: Array is all zeros (e.g., [0, 0]) -> [null, null]
-                // Since no non-zero value exists to anchor a neighbor, we nullify everything.
-                return arr.fill(null);
-            }
-
-            if (firstNonZeroIndex > 1) {
-                // We have a non-zero value later in the array, and enough zeros before it.
-                // Keep arr[firstNonZeroIndex - 1] as 0.
-                // Nullify everything before that.
-                for (let k = 0; k <= firstNonZeroIndex - 2; k++) {
-                    arr[k] = null;
-                }
-            }
-
-            // Phase 2: Handle zeros between non-zero values (Original Logic)
-            for (let i = 0; i < arr.length; i++) {
-                // 1. Find a value that is not zero (and not null)
-                if (arr[i] !== 0 && arr[i] !== null) {
-
-                    // 2. Check if the NEXT TWO values exist and are zero
-                    if (i + 2 < arr.length && arr[i + 1] === 0 && arr[i + 2] === 0) {
-
-                        // Condition Met. Now find the stopping point (next non-zero)
-                        let nextNonZeroIndex = -1;
-
-                        // Look ahead starting after the current non-zero
-                        for (let j = i + 1; j < arr.length; j++) {
-                            if (arr[j] !== 0 && arr[j] !== null) {
-                                nextNonZeroIndex = j;
-                                break;
-                            }
-                        }
-
-                        let stopNullingAt;
-
-                        if (nextNonZeroIndex !== -1) {
-                            // Found another non-zero value.
-                            // Rule: "prior to it must be 0 too".
-                            // So we must stop nulling at (nextNonZeroIndex - 2), leaving index (nextNonZeroIndex - 1) as 0.
-                            stopNullingAt = nextNonZeroIndex - 2;
-                        } else {
-                            // No other non-zero value found (End of array).
-                            // We nullify everything until the end.
-                            stopNullingAt = arr.length - 1;
-                        }
-
-                        // 3. Apply nulls
-                        // Start at i+2 (keeping i+1 as the '0' after the first value)
-                        for (let k = i + 2; k <= stopNullingAt; k++) {
-                            arr[k] = null;
-                        }
-
-                        // Optimization: Move our main loop index 'i' forward
-                        // If we found a next value, we can jump to it (minus 1, because loop does i++)
-                        if (nextNonZeroIndex !== -1) {
-                            i = nextNonZeroIndex - 1;
-                        } else {
-                            // If we filled to the end, we are done
-                            break;
-                        }
-                    }
-                }
-            }
-            return arr;
-        }
-
 
         var thisDayDailyDataDetailChat_Map = new Map();
-        const accountSettings = new Map();
 
         // daily load at the last
-        async function loadDailyDayDetailChart(rawData, todayData, myusername, rainSums) {
+        async function loadDailyDayDetailChart(rawData, todayData, myusername) {
 
 
             var thisDayDailyDataDetailChat = thisDayDailyDataDetailChat_Map.get(myusername);
@@ -2714,59 +2307,6 @@
             //log("pvData");
             //log(pvData);
 
-            let requestRainDataOnce = accountSettings.get("requestRainDataOnce_" + myusername);
-            //log("requestRainDataOnce: " + requestRainDataOnce + " =========================== " + myusername);
-            if (requestRainDataOnce == false || requestRainDataOnce == undefined) {
-                accountSettings.set("requestRainDataOnce_" + myusername, true);
-
-                new Promise(async (resolve) => {
-                    try {
-                        await sleep(1000);
-                        let rainData = await getRainData();
-
-                        log("rain today - " + myusername);
-                        log(rainData);
-
-
-
-                        // Convert interval strings to objects with start/end times
-                        let intervals = labels.map((dateStr, idx, arr) => {
-                            let start = parseDateTimeRain(dateStr);
-                            // End is next interval's start or +30mins if last
-                            let end;
-                            if (idx < arr.length - 1) {
-                                end = parseDateTimeRain(arr[idx + 1]);
-                            } else {
-                                end = new Date(start.getTime() + 30 * 60000);
-                            }
-                            return { start, end };
-                        });
-
-                        // For each interval, sum rainData.value where systemdate is inside interval
-                        let rainSums = intervals.map(({ start, end }) => {
-                            let total = 0;
-                            for (const item of rainData) {
-                                const d = new Date(item.systemdate);
-                                if (d >= start && d < end) {
-                                    total += item.value;
-                                }
-                            }
-                            return total; // Or null/0 if you want to highlight intervals with no data
-                        });
-
-                        //log(rainSums);
-
-                        rainSums = processArray_RainData(rainSums);
-
-                        //log(rainSums);
-
-                        await loadDailyDayDetailChart(rawData, todayData, myusername, rainSums);
-                    }
-                    finally {
-                        resolve("");
-                    }
-                });
-            }
 
 
 
@@ -2910,20 +2450,6 @@
                     {
                         // pointBackgroundColor: 'rgb(77, 77, 255)', // Dot fill color 
                         // pointBorderColor: 'white',
-                        fill: true,
-                        backgroundColor: 'rgba(22, 100, 100, 0.5)', // total revenue background coor
-                        pointRadius: 1, // Make dots bigger
-                        label: 'Rain Today',
-                        data: rainSums,
-                        borderColor: 'rgba(0, 255, 253, 0.5)',  // PV border color
-                        borderWidth: 20, // thickness of the line: default is 3
-                        tension: 0.3,
-                        yAxisID: 'y2',
-                        order: 0
-                    },
-                    {
-                        // pointBackgroundColor: 'rgb(77, 77, 255)', // Dot fill color 
-                        // pointBorderColor: 'white',
                         pointRadius: 1, // Make dots bigger
                         label: 'PV (W)',
                         data: pvData,
@@ -2981,11 +2507,6 @@
                         {
                             filter: function (context) {
                                 const isLastDataIndex = context.dataIndex === context.chart.data.labels.length - 1;
-
-                                if (context.dataset.label == 'Rain Today') {
-                                    if (context.raw == 0)
-                                        return false;
-                                }
 
                                 if (isLastDataIndex && context.dataset.label === 'PV (W)') {
 
@@ -3077,31 +2598,10 @@
 
                             }
                         },
-                        y2: {
-                            // rain data chartSetup                                    
-                            ticks:
-                            {
-                                maxTicksLimit: 2,
-                                display: true,
-                                beginAtZero: true,
-                                padding: 5,
-                                offset: true,
-                                color: 'cyan',  // PV Y axis legend
-                                font:
-                                {
-                                    size: 35,
-                                    family: 'Courier New',
-                                },
-                                callback: function (value) {
-                                    return value + "mm";
-                                }
-
-                            }
-                        }
 
                     }
                 },
-                plugins: [rainPlugin, dataLabelsPlugin] // Register plugins here
+                plugins: [dataLabelsPlugin] // Register plugins here
             };
 
             // Render chart
@@ -3466,7 +2966,6 @@
                             //log(firstUsernameInit);
                             //log(accountSelected)
 
-                            rainSettings_Setup();
 
 
                             await startRefetchInterval();
@@ -3479,7 +2978,6 @@
                         selectedUsers = temp
                         saveAccounts();
 
-                        rainSettings_Setup();
 
 
 
@@ -3496,7 +2994,6 @@
                     selectedUsers = temp
                     saveAccounts();
 
-                    rainSettings_Setup();
 
 
                     //////

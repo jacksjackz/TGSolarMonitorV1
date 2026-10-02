@@ -45,7 +45,7 @@ Four tables, auto-created on startup:
 - **`index2.html`** (`/index2`) - **Main page.** Detailed analytics with revenue ratios, historical comparisons, and Chart.js graphs
 - **`index.html`** (`/index`) - Dashboard showing live solar data, daily charts, and account info
 - **`index3.html`** (`/index3`) - Battery/PV visualization with animated battery component
-- **`index4.html`** (`/index4`) - Multi-account revenue wall dashboard (today / this month / last month charts, rain overlays, account ratio footer). See `index4.md` for full documentation
+- **`index4.html`** (`/index4`) - Multi-account revenue wall dashboard (today / this month / last month charts, account ratio footer). See `index4.md` for full documentation
 
 All frontends use Chart.js for graphs, jQuery, Moment.js, and inline `<script>` blocks that fetch from the API.
 

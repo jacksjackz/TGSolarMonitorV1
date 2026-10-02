@@ -1,6 +1,6 @@
 # index4.html — Multi-Account Revenue Dashboard
 
-Served at **`/index4`** (`app.js` route → `index4.html`). A full-screen, dark-themed wall dashboard showing live and historical **net revenue (MYR)** for one or more solar accounts, with Chart.js graphs, animated rain overlays, and an account-ratio footer. Built for a large desktop or TV screen. At 768px or narrower everything is hidden and a "use a PC" message is shown.
+Served at **`/index4`** (`app.js` route → `index4.html`). A full-screen, dark-themed wall dashboard showing live and historical **net revenue (MYR)** for one or more solar accounts, with Chart.js graphs and an account-ratio footer. Built for a large desktop or TV screen. At 768px or narrower everything is hidden and a "use a PC" message is shown.
 
 The whole page is one file: CSS in `<style>`, all logic in one inline `<script>` in `<head>`. The `<body>` only holds a few static elements. Everything else is built in JS.
 
@@ -31,7 +31,6 @@ let url = "https://tgapps.synology.me:40556";   // default if both false
 `testLocalServer` wins over `onlineServer`. **Exceptions that ignore `url`:**
 - `safeReload()` always pings `https://tgapps.synology.me:40556/getServerTime`.
 - `getLastUpdateTime()` uses a relative path `/getLastUpdateTime/...`.
-- Rain data always comes from `https://tgapps.synology.me:9234` (a separate weather service, station `63`).
 
 ---
 
@@ -47,8 +46,6 @@ let url = "https://tgapps.synology.me:40556";   // default if both false
 | `getHistoryRatios()` | `GET /getHistoryRatios` | `{ min, max }` acct1/acct2 daily revenue ratio over last 3 months |
 | `getHistoryMaxPVData()` | `GET /getHistoryMaxPV` | `[{ username, max }]` peak PV per account (last 3 months) |
 | inline in `startRefetchInterval()` | `GET /getHighestRevenue` | `{ highest, time }`: record day revenue + date |
-| `getRainData()` | `:9234/api/data/getRainDataToday/63` | Today's rain readings `[{ systemdate, value }]` |
-| `getMonthlyRainData()` | `:9234/api/data/getFastRainDataByMonthYear/MM/YYYY/63` | `{ "1": mm, "2": mm, ... }` per day |
 
 ### `/getTGSolar/:type` types used
 
@@ -113,7 +110,7 @@ Elements are created once and then updated in place on later refreshes (`isNew` 
 4. Work out which accounts to show from `localStorage.TGSolar_selectedUsers`:
    - If the saved selection matches the server list → use it.
    - If it is empty or missing → default to `available_accounts[0]`.
-5. `rainSettings_Setup()` builds the rain plugins, then `startRefetchInterval()` runs.
+5. `startRefetchInterval()` runs.
 6. In parallel: `getHistoryRatios()` fills the footer min/max, and `getHistoryMaxPVData()` fills the footer Max PV.
 
 ### `refetchDataAll(accounts)`
@@ -121,12 +118,12 @@ For each account, in order: reset the stale highlight, call `refetchData(user)`,
 
 If 2 or more accounts are shown, the **live ratio** is `Today[acct0] / Today[acct1]`, written into the footer.
 
-In `finally` it starts the rain animation, then checks each account's last scrape time. **More than 15 minutes old** → that account's `.net-revenue-today` panel turns red (`#db0000`).
+In `finally` it checks each account's last scrape time. **More than 15 minutes old** → that account's `.net-revenue-today` panel turns red (`#db0000`).
 
 ### `refetchData(username)`
 1. Wait 1s, then fetch today, yesterday and last-month indicators, the last-month detail, the this-month detail, and today's daily rows.
 2. Build or update the three sections. The `earning_map` value is stored in `dataHM` as `"<label>_<user>"`.
-3. `loadLastMonthDetailChart`, then `getMonthlyRainData`, then `loadthisMonthDetailChart`, then `loadDailyDayDetailChart`.
+3. `loadLastMonthDetailChart`, then `loadthisMonthDetailChart`, then `loadDailyDayDetailChart`.
 4. Attach the account-picker click handler to `#logoSun`.
 
 ### Label mapping quirk
@@ -154,29 +151,21 @@ When the server's `earning_map` value is `null` (usually the 2nd account), the p
 ### Today: `thisDayDetailChart_<user>` (line)
 - Input: today's 5-min rows. `recalculateSavings(rows, 0.37)` recomputes `energyKWh`, `savingsRM` and `cumulativeRM` from `pv` (W). `aggregateByIntervalV2(rows, 30)` then groups them into **30-minute bins**, averaging pv/grid/load and summing energy/savings.
 - Starts one bin before the first `pv > 0`.
-- Datasets: **Rain Today** (`y2`, cyan, animated rain), **PV (W)** (`y1`, red), **Cumulative Net Revenue** (`y`, green fill).
+- Datasets: **PV (W)** (`y1`, red), **Cumulative Net Revenue** (`y`, green fill).
 - If the last PV bin is lower than the one before, it is bumped to previous × 1.05 to smooth the partial bin.
 - **Trend arrow** (`#<user>_status`) compares the last two *raw* 5-min PV readings: ⬆ green, ⬇ red, ↔ yellow. All blink.
 - `dataLabelsPlugin` draws large yellow revenue labels on every 2nd point (skips index 0 and `length-3`).
 - Custom HTML legend overlay (`#legendOverlay_<user>`), so the chart doesn't resize.
-- Rain is fetched **once per refresh cycle**, guarded by `accountSettings["requestRainDataOnce_<u>"]`. It is summed into the chart's 30-min intervals and cleaned by `processArray_RainData`. The function then calls itself again with `rainSums`.
 - **Avg RM/hr** = total savings ÷ (bins × 0.5h).
 
-### This Month: `thisMonthDetailChart_<user>` (bar + line)
+### This Month: `thisMonthDetailChart_<user>` (bar)
 - Bars: daily `netRevenue` (purple). Today is appended using `dataHM.Today_<u>`.
-- Overlay: **Rain (mm)** line on axis `y-rain` from the monthly rain data, with `monthlyRainPlugin`.
 
 ### Last Month: `lastMonthDetailChart_<user>` (bar)
 - Daily `netRevenue`, yellow bars, white border.
 
 ### Chart sizing
 Canvas width = `innerWidth − netRevenuePanelWidth − 10% innerWidth`, and the first account's size is reused for the others (`firstAccount_*Chart_Size*`). The today chart starts at width 0 and fills its flex container.
-
-### Rain animation
-`rainPlugin` and `monthlyRainPlugin` share one `rainDrops` array (100 drops). Each clips to the area under its dataset and draws falling cyan lines. `animateRain()` runs a `requestAnimationFrame` loop calling `update('none')` on every daily and monthly chart, and skips any chart with an active tooltip. Each chart's `beforeDraw` advances the shared drops, so more charts means faster rain. That is why `defaultSpeed` drops from 1.5 to 0.5 when 2 or more accounts are selected.
-
-### `processArray_RainData(arr)`
-Turns long runs of zeros into `null` so the filled rain line only shows around actual rain. It keeps one `0` on each side of a non-zero run as a ramp, and turns an all-zero array into all `null`.
 
 ---
 
