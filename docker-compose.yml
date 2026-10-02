@@ -2,7 +2,7 @@ services:
   tgsolarmonitor:
     build: .
     container_name: tgsolarmonitor
-    restart: always
+    restart: "yes"
     # No host port any more - nginx below owns 40555 and proxies to this
     # container over tgappsnetwork.
     expose:
@@ -20,7 +20,7 @@ services:
   tgsolarmonitor-nginx:
     image: nginx:alpine
     container_name: tgsolarmonitor-nginx
-    restart: always
+    restart: "yes"
     depends_on:
       - tgsolarmonitor
     ports:
