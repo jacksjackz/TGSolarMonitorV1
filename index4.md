@@ -75,6 +75,8 @@ body
 │   └── #sliderTrack  (flex row, slides with transform: translateX(-N × 100%))
 │       └── .page#page_<i>   one per page, 100% wide, clips its own overflow
 │           ├── #container_top_p<i>  (.divAccountContainerTop)   ← totals of THIS page's accounts
+│           │   ├── #pageTitle_p<i>  (.pageTitle)  usernames on the page ("tgrsolar + tgrsolar1"), set into the
+│           │   │                    top border like a tab; each name in its account's border colour
 │           │   ├── Last Month    #divTodayLastMonth_Today_p<i>
 │           │   ├── This Month    #divTodayThisMonth_Today_p<i>
 │           │   └── Today  [sun → /index]
@@ -107,7 +109,7 @@ body
 ### Slots (one account on several pages)
 Each copy of an account is a **slot**, with `getSlotKey(username, pageIndex)` = `<username>_p<pageIndex>` (e.g. `tgrsolar@teckguan.com_p1`). Element ids (`<slot>` above), the chart maps and the `dataHM` keys all use the slot key, so the copies never clash. API calls, `usernamesHM`, the name shown in the panel, `data-username` (stale check, Max PV) and the border colour (`accountColorHM`) use the real username.
 
-Every page's top container uses the first colour from `brightColors`. Each account takes the next colour the first time it is drawn, and keeps it on every page.
+Every page's top container uses the first colour from `brightColors`. `buildPages()` then gives each account the next colour, in page order (`accountColorHM`), so the page title can use the same colours. An account keeps its colour on every page. `.page` has `padding-top: 1.2vw` to leave room for the title tab above the border.
 
 `makeGradientFromMainColor()` turns each colour from `getColorRemaining()` into the `--border-gradient` used by the animated border.
 

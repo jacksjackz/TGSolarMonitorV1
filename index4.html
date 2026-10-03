@@ -60,7 +60,31 @@
             overflow: hidden;
             /* on a narrow screen, a page clips its own content instead of spilling into the next page */
             box-sizing: border-box;
-            padding: 0 10px;
+            padding: 1.2vw 10px 0 10px;
+            /* top: room for the .pageTitle sitting on the top border */
+        }
+
+        /* page title (usernames on the page), set into the top border of the totals bar like a tab */
+        .pageTitle {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -62%);
+            z-index: 2;
+            /* above the flowing border (::before) */
+            background: black;
+            padding: 0 1.2vw;
+            font-family: Arial, sans-serif;
+            font-size: 1.5vw;
+            font-weight: bold;
+            letter-spacing: 3px;
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+
+        .pageTitleSeparator {
+            color: #aaa;
+            font-weight: normal;
         }
 
         .pageFooter {
@@ -1997,6 +2021,13 @@
         function buildPages() {
             let topColor = getColorRemaining(); // same colour for every page's top
 
+            // give each account its colour now (page order, same as refetchData would),
+            // so the page titles can show the names in the colours of their columns
+            pages.flat().forEach(user => {
+                if (accountColorHM.has(user.username) == false)
+                    accountColorHM.set(user.username, getColorRemaining());
+            });
+
             const slider = document.createElement('div');
             slider.id = "slider";
 
@@ -3359,6 +3390,24 @@
             container.style.borderColor = mainColor;
             container.style.setProperty('--border-gradient', gradientString);
             container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
+
+            // page title set into the top border: the usernames on this page, each in its column's colour
+            const pageTitle = document.createElement('div');
+            pageTitle.className = "pageTitle";
+            pageTitle.id = "pageTitle_p" + pageIndex;
+            pages[pageIndex].forEach((user, i) => {
+                if (i > 0) {
+                    const separator = document.createElement('span');
+                    separator.className = "pageTitleSeparator";
+                    separator.textContent = " + ";
+                    pageTitle.appendChild(separator);
+                }
+                const name = document.createElement('span');
+                name.textContent = user.username.split("@")[0];
+                name.style.color = accountColorHM.get(user.username) || "white";
+                pageTitle.appendChild(name);
+            });
+            container.appendChild(pageTitle);
 
             ///
             const divLastMonthTotalMain = document.createElement('div');
