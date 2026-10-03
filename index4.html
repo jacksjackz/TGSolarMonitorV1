@@ -27,18 +27,203 @@
     <title>TG Solar Monitoring</title>
 
     <style>
-        #containerMain *:not(canvas) {
+        .containerMain *:not(canvas) {
             /* width: 50%; */
             box-sizing: border-box;
 
         }
 
-        #containerMain {
+        .containerMain {
             display: inline-flex;
             justify-content: space-between;
             flex-direction: row;
             width: 100%;
 
+        }
+
+        /* Pages: one slide per page of accounts (see Page settings dialog).
+           The side padding keeps the flowing borders (::before, -5px) from being clipped. */
+        #slider {
+            overflow: hidden;
+            margin: 0 -10px;
+        }
+
+        #sliderTrack {
+            display: flex;
+            align-items: flex-start;
+            transition: transform 0.8s ease-in-out;
+        }
+
+        .page {
+            flex: 0 0 100%;
+            min-width: 0;
+            overflow: hidden;
+            /* on a narrow screen, a page clips its own content instead of spilling into the next page */
+            box-sizing: border-box;
+            padding: 0 10px;
+        }
+
+        .pageFooter {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 50px 10px 50px;
+            pointer-events: none;
+        }
+
+        .pageFooter .maxPV {
+            width: 20%;
+            color: #88FBE7;
+            font-size: 1.5vw;
+            text-shadow: rgb(255 255 255 / 99%) 0px 0px 3px;
+            font-family: 'Courier New';
+        }
+
+        .pageFooter .maxPV:last-child:not(:first-child) {
+            text-align: right;
+        }
+
+        .pageFooter .accountRatio {
+            color: white;
+            font-size: 2vw;
+            font-family: 'Courier New';
+            text-align: center;
+            flex: 1;
+        }
+
+        #pageDots {
+            position: absolute;
+            left: 30px;
+            top: 55px;
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .pageDot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #00E5FF;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .pageDot.active {
+            background-color: #00E5FF;
+        }
+
+        .pageSettings {
+            text-align: left;
+            font-size: 64px;
+            color: #222;
+            padding: 20px;
+            /* x2 sizes for the TV; scroll instead of running off a smaller screen */
+            max-width: 92vw;
+            max-height: 85vh;
+            overflow: auto;
+        }
+
+        .pageSettings h2 {
+            font-size: 88px;
+            margin: 0 0 50px 0;
+        }
+
+        .pageSettings table {
+            border-collapse: collapse;
+        }
+
+        .pageSettings th {
+            font-size: 52px;
+            font-weight: bold;
+            color: #555;
+            padding: 0 40px 20px 40px;
+            white-space: nowrap;
+        }
+
+        .pageSettings td {
+            text-align: center;
+            padding: 28px 40px;
+            border-top: 2px solid #ddd;
+        }
+
+        .pageSettings td.pageSettingsName {
+            text-align: left;
+            padding-left: 0;
+            padding-right: 80px;
+        }
+
+        .pageSettings input[type="checkbox"] {
+            width: 80px;
+            height: 80px;
+            cursor: pointer;
+            accent-color: #1976d2;
+        }
+
+        .pageSettingsRemove {
+            margin-left: 16px;
+            width: 56px;
+            height: 56px;
+            font-size: 32px;
+            line-height: 1;
+            border: none;
+            border-radius: 50%;
+            background: #f3d2d2;
+            color: #b00020;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        .pageSettingsRemove:hover {
+            background: #e8a9a9;
+        }
+
+        .pageSettings select {
+            font-size: 40px;
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+
+        .pageSettingsSecondsRow td {
+            border-top: 4px solid #bbb;
+        }
+
+        .pageSettingsButtons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .pageSettingsButton {
+            font-size: 60px;
+            padding: 32px 100px;
+            border: none;
+            border-radius: 20px;
+            background: #1976d2;
+            color: white;
+            cursor: pointer;
+        }
+
+        .pageSettingsButton:hover {
+            background: #135ca8;
+        }
+
+        .pageSettingsButtonSecondary {
+            background: #e0e0e0;
+            color: #222;
+        }
+
+        .pageSettingsButtonSecondary:hover {
+            background: #c8c8c8;
+        }
+
+        .pageSettingsNote {
+            font-size: 44px;
+            color: #666;
+            margin-top: 50px;
+            max-width: 1800px;
         }
 
         .ratio-label {
@@ -519,10 +704,6 @@
             /* display: none; */
         }
 
-        #divTotal_Yesterday {
-            font-size: 3.0vw;
-        }
-
 
         .section {
 
@@ -590,6 +771,32 @@
             /* background: #e0ffe0; */
             border: #e0ffe0 3px solid;
             text-align: center;
+            transition: background-color 0.8s ease;
+            /* stale highlight fades in/out */
+        }
+
+        /* Flash a value after it changes (see animateNumber). Only a "from" frame,
+           so it eases back to the element's own color / shadow. */
+        .value-flash-up {
+            animation: valueFlashUp 1.5s ease-out;
+        }
+
+        .value-flash-down {
+            animation: valueFlashDown 1.5s ease-out;
+        }
+
+        @keyframes valueFlashUp {
+            from {
+                color: #00ff6a;
+                text-shadow: 0 0 25px #00ff6a;
+            }
+        }
+
+        @keyframes valueFlashDown {
+            from {
+                color: #ff5454;
+                text-shadow: 0 0 25px #ff5454;
+            }
         }
 
         .section-title {
@@ -817,10 +1024,31 @@
             });
         }
 
-        async function getHistoryRatios() {
+        async function getHistoryRatios(username1, username2) {
 
             return new Promise(async (resolve, reject) => {
-                let response = await fetch(url + "/getHistoryRatios");
+                // compare only the 2 given accounts, else fall back to the original (all accounts)
+                let apiPath = "/getHistoryRatios";
+                let options = {};
+                if (isBlank(username1) == false && isBlank(username2) == false) {
+                    apiPath = "/getHistoryRatiosByUsername";
+                    options = {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            formData: {
+                                username1: username1,
+                                username2: username2
+                            }
+                        })
+                    };
+                }
+
+                log("getHistoryRatios: " + apiPath + " | " + username1 + " | " + username2);
+
+                let response = await fetch(url + apiPath, options);
                 const contentLength = response.headers.get('content-length');
                 const data = contentLength && parseInt(contentLength) > 0 ? await response.json() : "";
                 resolve(data);
@@ -896,6 +1124,72 @@
             return true;
         }
 
+        // Count a value element from what it shows now to `to`, then flash it green (up)
+        // or red (down). The first value an element gets only counts up, no flash.
+        // Non-numeric targets ("-") are written as-is.
+        function animateNumber(el, to) {
+            if (!el) return;
+
+            const target = String(to);
+            if (target === el.dataset.value) return; // unchanged, or already heading there
+
+            const previous = parseFloat(el.dataset.value);
+            el.dataset.value = target;
+
+            if (el._countAnim) {
+                cancelAnimationFrame(el._countAnim);
+                el._countAnim = null;
+            }
+
+            const toNum = parseFloat(target);
+            if (isNaN(toNum)) {
+                el.textContent = target;
+                return;
+            }
+
+            let from = parseFloat(el.textContent);
+            if (isNaN(from)) from = 0;
+
+            const decimals = (target.split('.')[1] || '').length;
+            const duration = 1200;
+            const start = performance.now();
+
+            function step(now) {
+                const t = Math.min((now - start) / duration, 1);
+                const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+                el.textContent = (from + (toNum - from) * eased).toFixed(decimals);
+
+                if (t < 1) {
+                    el._countAnim = requestAnimationFrame(step);
+                } else {
+                    el.textContent = target;
+                    el._countAnim = null;
+                }
+            }
+            el._countAnim = requestAnimationFrame(step);
+
+            if (isNaN(previous) == false) {
+                el.classList.remove('value-flash-up', 'value-flash-down');
+                void el.offsetWidth; // force reflow so the flash restarts
+                el.classList.add(toNum > previous ? 'value-flash-up' : 'value-flash-down');
+            }
+        }
+
+        // One refresh can write the same value element several times (server value first,
+        // then a recalculated one). Stage the writes and animate once at the end, so the
+        // count-up never runs through those in-between values.
+        function setPendingValue(el, value) {
+            if (el) el.dataset.pending = value;
+        }
+
+        function commitPendingValues(root) {
+            (root || document).querySelectorAll('[data-pending]').forEach(el => {
+                const value = el.dataset.pending;
+                delete el.dataset.pending;
+                animateNumber(el, value);
+            });
+        }
+
 
         let dataHM = new Map();
 
@@ -915,187 +1209,89 @@
         }
 
 
-        async function refetchDataAll(accounts) {
+        // read a number from dataHM, "-" / missing count as 0
+        function getDataHMNumber(key) {
+            let value = dataHM.get(key) || 0;
+            if (value == "-" || isBlank(value))
+                return 0;
+            return parseFloat(value) || 0;
+        }
+
+        // pages: array of pages, each an array of account objects ({ username, ... })
+        async function refetchDataAll(pagesToFetch) {
             return new Promise(async (resolve, reject) => {
                 try {
+                    refreshFetchCache = new Map(); // fetch fresh data once per account for this refresh
 
-                    let totalToday = 0;
-                    let totalThisMonth = 0;
-                    let totalLastMonth = 0;
-                    let totalYesterday = 0;
+                    for (let pageIndex = 0; pageIndex < pagesToFetch.length; pageIndex++) {
+                        let accounts = pagesToFetch[pageIndex];
 
-                    for (const obj of accounts) {
-                        //http://127.0.0.1:40555/getLastUpdateTime/tgrsolar@teckguan.com
+                        // the top totals only add up the accounts on this page
+                        let totalToday = 0;
+                        let totalThisMonth = 0;
+                        let totalLastMonth = 0;
+                        let totalYesterday = 0;
 
+                        for (const obj of accounts) {
+                            await refetchData(obj.username, pageIndex);
 
-                        // set the background color to transparent
-                        document.querySelectorAll(".net-revenue.net-revenue-today").forEach(el => el.style.backgroundColor = "transparent");
+                            let slotKey = getSlotKey(obj.username, pageIndex);
 
+                            totalToday = totalToday + getDataHMNumber("Today_" + slotKey);
 
-                        await refetchData(obj.username);
+                            // ExtraInfo = today's part, kept apart for accounts with the manual fix (see loadDailyDayDetailChart)
+                            totalThisMonth = totalThisMonth + getDataHMNumber("ThisMonth_" + slotKey) + getDataHMNumber("ThisMonth_OtherAcc_ExtraInfo_" + slotKey);
 
+                            totalLastMonth = totalLastMonth + getDataHMNumber("Last Month_" + slotKey);
+                            totalYesterday = totalYesterday + getDataHMNumber("Yesterday_" + slotKey);
 
-                        let getToday = dataHM.get("Today_" + obj.username) || 0;
-                        if (getToday == "-")
-                            getToday = 0;
-
-                        let getThisMonth = dataHM.get("ThisMonth_" + obj.username) || 0;
-                        if (getThisMonth == "-")
-                            getThisMonth = 0;
-
-                        let getLastMonth = dataHM.get("Last Month_" + obj.username) || 0;
-                        if (getLastMonth == "-")
-                            getLastMonth = 0;
-
-                        let getYesterday = dataHM.get("Yesterday_" + obj.username) || 0;
-                        if (getYesterday == "-")
-                            getYesterday = 0;
-
-                        log("Fetch Data All: " + getToday + " | " + getThisMonth + " | " + getLastMonth);
-
-                        if (isBlank(getToday) == false)
-                            totalToday = totalToday + parseFloat(getToday);
-
-                        if (isBlank(getThisMonth) == false) {
-                            totalThisMonth = totalThisMonth + parseFloat(getThisMonth);
-
-                            let totalThisMonth2 = dataHM.get("ThisMonth_OtherAcc_ExtraInfo_" + obj.username) || 0;
-                            totalThisMonth = totalThisMonth + parseFloat(totalThisMonth2);
-
-                            //log("abc: " + obj.username + " || ExtraInfo: " + totalThisMonth2);
+                            log("Fetch Data All: page " + (pageIndex + 1) + " | " + obj.username + " | " + totalToday + " | " + totalThisMonth + " | " + totalLastMonth);
                         }
 
-                        if (isBlank(getLastMonth) == false)
-                            totalLastMonth = totalLastMonth + parseFloat(getLastMonth);
+                        animateNumber(getPageElement("divTodayTotal_Today", pageIndex), Math.round(totalToday));
+                        animateNumber(getPageElement("divTodayThisMonth_Today", pageIndex), Math.round(totalThisMonth));
+                        animateNumber(getPageElement("divTodayLastMonth_Today", pageIndex), Math.round(totalLastMonth));
+                        animateNumber(getPageElement("divTotal_Yesterday", pageIndex), Math.round(totalYesterday));
 
-                        if (isBlank(getYesterday) == false) {
-                            totalYesterday = totalYesterday + parseFloat(getYesterday);
+                        // Ratio of 1st account vs 2nd account (daily revenue), only for a page of 2 accounts
+                        if (accounts.length == 2) {
+                            let account1Today = getDataHMNumber("Today_" + getSlotKey(accounts[0].username, pageIndex));
+                            let account2Today = getDataHMNumber("Today_" + getSlotKey(accounts[1].username, pageIndex));
+
+                            let ratio = account2Today > 0 ? (account1Today / account2Today) : 0;
+                            log("Account ratio - " + accounts[0].username + ": " + account1Today + " | " + accounts[1].username + ": " + account2Today + " | Ratio: " + ratio.toFixed(2));
+
+                            pageRatios[pageIndex].live = ratio.toFixed(2);
+                            renderPageRatio(pageIndex);
                         }
-
-                        ///
-
                     }
-
-                    $("#divTodayTotal_Today").text(Math.round(totalToday));
-                    $("#divTodayThisMonth_Today").text(Math.round(totalThisMonth));
-                    $("#divTodayLastMonth_Today").text(Math.round(totalLastMonth));
-                    $("#divTotal_Yesterday").text(Math.round(totalYesterday));
-
-                    log("abc: " + Math.round(totalYesterday).toFixed(0));
-                    log("abc: " + Math.round(totalYesterday).toFixed(0));
-
-                    // Calculate ratio of 1st account vs 2nd account (daily revenue)
-                    if (accounts.length >= 2) {
-                        let account1Today = parseFloat(dataHM.get("Today_" + accounts[0].username)) || 0;
-                        let account2Today = parseFloat(dataHM.get("Today_" + accounts[1].username)) || 0;
-
-                        let ratio = account2Today > 0 ? (account1Today / account2Today) : 0;
-                        log("Account ratio - " + accounts[0].username + ": " + account1Today + " | " + accounts[1].username + ": " + account2Today + " | Ratio: " + ratio.toFixed(2));
-
-                        // Display the ratio at bottom of page
-                        let footer = document.getElementById("bottomFooterContainer");
-                        if (!footer) {
-                            footer = document.createElement('div');
-                            footer.id = "bottomFooterContainer";
-                            // footer.style.position = 'fixed';
-                            footer.style.bottom = '0';
-                            footer.style.left = '0';
-                            // footer.style.width = '100%';
-                            footer.style.zIndex = '1000';
-                            footer.style.display = 'flex';
-                            footer.style.flexDirection = 'row';
-                            footer.style.justifyContent = 'space-between';
-                            footer.style.alignItems = 'center';
-                            footer.style.padding = '0 50px 10px 50px';
-                            footer.style.pointerEvents = 'none';
-                            document.body.appendChild(footer);
-                        }
-
-                        // Ensure we have placeholders for PV left and right if they don't exist yet
-                        // This keeps the ratio centered even if PV data hasn't arrived
-                        if (!document.getElementById("maxPV_left")) {
-                            let leftPlaceholder = document.createElement('div');
-                            leftPlaceholder.id = "maxPV_left";
-                            leftPlaceholder.style.width = '20%';
-                            leftPlaceholder.style.color = '#88FBE7';
-                            leftPlaceholder.style.fontSize = '1.5vw';
-                            leftPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 3px';
-                            leftPlaceholder.style.fontFamily = 'Courier New';
-                            footer.insertBefore(leftPlaceholder, footer.firstChild);
-                        }
-
-                        let ratioElement = document.getElementById("accountRatio");
-                        if (!ratioElement) {
-                            ratioElement = document.createElement('div');
-                            ratioElement.id = "accountRatio";
-                            ratioElement.style.color = 'white';
-                            ratioElement.style.fontSize = '2vw';
-                            ratioElement.style.fontFamily = 'Courier New';
-                            ratioElement.style.textAlign = 'center';
-                            ratioElement.style.flex = '1';
-                            footer.appendChild(ratioElement);
-                        }
-
-                        if (!document.getElementById("maxPV_right")) {
-                            let rightPlaceholder = document.createElement('div');
-                            rightPlaceholder.id = "maxPV_right";
-                            rightPlaceholder.style.width = '20%';
-                            rightPlaceholder.style.color = '#88FBE7';
-                            rightPlaceholder.style.fontSize = '1.5vw';
-                            rightPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 3px';
-                            rightPlaceholder.style.fontFamily = 'Courier New';
-                            rightPlaceholder.style.textAlign = 'right';
-                            footer.appendChild(rightPlaceholder);
-                        }
-                        ///
-
-                        currentRatio = ratio.toFixed(2);
-
-
-                        ratioElement.innerHTML = `
-    <span class="ratio-label">Ratio:</span> 
-    <span class="val-min">(Min) ${minRatio}</span> 
-    <span class="val-curr">(Live) ${currentRatio}</span> 
-    <span class="val-max">(Max) ${maxRatio}</span>
-`;
-
-                    }
-
 
                 }
                 finally {
-                    // var styleTag = document.createElement('style');
-                    // styleTag.id = 'my-dynamic-style';
-                    // styleTag.textContent = `
-                    //                         #containerMain *:not(canvas) {
-                    //                             width: 100%;
-                    //                         }
-                    //                         `;
-                    // document.head.appendChild(styleTag);
+                    // check the last update time of all accounts (once each, even if on several pages)
+                    let checkedUsernames = new Set();
+                    for (const obj of pagesToFetch.flat()) {
+                        if (checkedUsernames.has(obj.username))
+                            continue;
+                        checkedUsernames.add(obj.username);
 
-                    //  setTimeout(function() {
-                    //     // Remove the style tag after 5 seconds
-                    //     var styleTag = document.getElementById('my-dynamic-style');
-                    //     if (styleTag) 
-                    //         styleTag.remove();
-                    // }, 500); // 500 milliseconds = 5 seconds
-
-                    // check the last update time of all accounts
-                    for (const obj of accounts) {
                         let lastUpdateTime = await getLastUpdateTime(obj.username);
-                        if (lastUpdateTime === null) continue;
-                        //compare to current time
-                        let currentTime = new Date();
-                        let diff = currentTime - lastUpdateTime;
-                        let diffInMinutes = diff / 60000;
-                        log("diffInMinutes: " + diffInMinutes + " | " + obj.username);
+                        let isStale = false;
 
-                        // if more than 15 minutes, highlight this account
-                        if (diffInMinutes > 15) {
-                            // highlight only this account's net-revenue-today div red #db0000
-                            document.querySelectorAll(`.net-revenue.net-revenue-today[data-username="${obj.username}"]`).forEach(el => el.style.backgroundColor = "#db0000");
+                        if (lastUpdateTime !== null) {
+                            //compare to current time
+                            let currentTime = new Date();
+                            let diff = currentTime - lastUpdateTime;
+                            let diffInMinutes = diff / 60000;
+                            log("diffInMinutes: " + diffInMinutes + " | " + obj.username);
 
+                            // if more than 15 minutes, highlight this account
+                            isStale = diffInMinutes > 15;
                         }
+
+                        // set red / transparent once per refresh (no reset at the start),
+                        // so a stale panel stays red instead of blinking off during the refresh
+                        document.querySelectorAll(`.net-revenue.net-revenue-today[data-username="${obj.username}"]`).forEach(el => el.style.backgroundColor = isStale ? "#db0000" : "transparent");
                     }
 
 
@@ -1113,7 +1309,26 @@
         let firstAccount_ThisMonthChart_Size = null;
         let firstAccount_ThisMonthChart_Size_Max = null;
 
-        async function refetchData(myusername) {
+        // One account can be on several pages. Each copy is a "slot": its element ids, charts and
+        // dataHM values are keyed by the slot key, the API calls use the real username.
+        function getSlotKey(username, pageIndex) {
+            return username + "_p" + pageIndex;
+        }
+
+        // Each account's data is fetched once per refresh (refetchDataAll clears this),
+        // so an account shown on 2 pages doesn't double the requests. Every caller gets its own copy.
+        let refreshFetchCache = new Map();
+
+        async function getCachedData(key, loader) {
+            if (refreshFetchCache.has(key) == false)
+                refreshFetchCache.set(key, loader());
+
+            return structuredClone(await refreshFetchCache.get(key));
+        }
+
+        async function refetchData(username, pageIndex) {
+
+            const myusername = getSlotKey(username, pageIndex);
 
             var dailyDataDetailValue = null;
             var thisMonthDataDetailValue = null;
@@ -1122,9 +1337,9 @@
             try {
                 await sleep(1000); // Simulate loading time
 
-                var todayData = await getSolarData("id_target_today", false, myusername);
-                var yesterdayData = await getSolarData("id_target_yesterday", false, myusername);
-                var lastMonthDataSingleData = await getSolarData("id_target_last_month", false, myusername);
+                var todayData = await getCachedData("id_target_today|" + username, () => getSolarData("id_target_today", false, username));
+                var yesterdayData = await getCachedData("id_target_yesterday|" + username, () => getSolarData("id_target_yesterday", false, username));
+                var lastMonthDataSingleData = await getCachedData("id_target_last_month|" + username, () => getSolarData("id_target_last_month", false, username));
 
                 log("yesterday data - " + myusername + " | " + yesterdayData[3].value);
                 log(yesterdayData);
@@ -1134,20 +1349,20 @@
 
                 if (lastMonthDataDetailValue == null || lastMonthDataDetailValue == "") {
                     //log("lastMonthDataDetailValue is null or empty, fetching detail data...");
-                    lastMonthDataDetailValue = await getSolarData("id_target_last_month_detail", true, myusername);
+                    lastMonthDataDetailValue = await getCachedData("id_target_last_month_detail|" + username, () => getSolarData("id_target_last_month_detail", true, username));
 
                     log("last month chart data");
                     log(lastMonthDataDetailValue);
                 }
 
                 // this month
-                thisMonthDataDetailValue = await getSolarData("id_target_current_month_detail", true, myusername);
+                thisMonthDataDetailValue = await getCachedData("id_target_current_month_detail|" + username, () => getSolarData("id_target_current_month_detail", true, username));
                 log("thisMonthDataDetailValue");
                 log(thisMonthDataDetailValue);
 
                 // daily todaydetail
                 let todayDate = moment().format('DDMMYYYY');
-                dailyDataDetailValue = await getDailyData(todayDate, null, myusername);
+                dailyDataDetailValue = await getCachedData("daily|" + todayDate + "|" + username, () => getDailyData(todayDate, null, username));
 
 
 
@@ -1168,12 +1383,8 @@
                 log("last month data");
                 log(lastMonthDataSingleData);
 
-                let containerMain = document.getElementById("containerMain");
-
-                if (containerMain == null) {
-                    containerMain = document.createElement('div');
-                    containerMain.id = "containerMain";
-                }
+                // the account's column goes into its own page (built in buildPages)
+                let containerMain = document.getElementById("containerMain_" + pageIndex);
 
 
                 let container = document.getElementById("container_" + myusername);
@@ -1181,7 +1392,10 @@
                 //log("container: " + container);              
 
                 if (container == null) {
-                    let mainColor = getColorRemaining();
+                    // the same account keeps its colour on every page
+                    if (accountColorHM.has(username) == false)
+                        accountColorHM.set(username, getColorRemaining());
+                    let mainColor = accountColorHM.get(username);
                     const gradientString = makeGradientFromMainColor(mainColor);
 
                     //log(gradientString);
@@ -1193,8 +1407,6 @@
                     container.style.setProperty('--border-gradient', gradientString);
                     container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
                     containerMain.appendChild(container);
-
-                    document.body.appendChild(containerMain);
                 }
                 // else {
                 //     container.innerHTML = '';
@@ -1260,7 +1472,7 @@
                             if (section.label === 'Today') {
                                 if (isNew) {
                                     netRevenue.className = 'net-revenue net-revenue-today';
-                                    netRevenue.dataset.username = myusername;
+                                    netRevenue.dataset.username = username; // stale check marks every copy of the account
                                     energyBlock.className = 'energy-block energy-block-today';
 
                                     installType.className = "installTypeClass";
@@ -1270,13 +1482,13 @@
                                     installTypeExtra.className = "installTypeExtraClass";
                                     // installTypeExtra.style.position = "absolute"; // Already in CSS
                                 }
-                                installType.innerHTML = usernamesHM.get(myusername) ? usernamesHM.get(myusername).description : myusername;
+                                installType.innerHTML = usernamesHM.get(username) ? usernamesHM.get(username).description : username;
 
                                 // Handle description3
                                 let desc3Content = "";
-                                if (usernamesHM.get(myusername) && usernamesHM.get(myusername).description3) {
+                                if (usernamesHM.get(username) && usernamesHM.get(username).description3) {
                                     try {
-                                        let desc3Json = JSON.parse(usernamesHM.get(myusername).description3);
+                                        let desc3Json = JSON.parse(usernamesHM.get(username).description3);
                                         // Format as vertical rows
                                         desc3Content = Object.entries(desc3Json).map(([k, v]) =>
                                             `<div class="desc-row">
@@ -1286,7 +1498,7 @@
                                         ).join('');
                                     } catch (e) {
                                         // Fallback to raw string if not valid JSON
-                                        desc3Content = `<div class="desc-row desc-val">${usernamesHM.get(myusername).description3}</div>`;
+                                        desc3Content = `<div class="desc-row desc-val">${usernamesHM.get(username).description3}</div>`;
                                     }
                                 }
                                 installTypeExtra.innerHTML = desc3Content;
@@ -1306,10 +1518,15 @@
                             }
 
 
-                            netRevenue.innerHTML = `
-                                ${section.label === 'Today' ? `<div class="live-indicator"><span class="dot2" id="logoSun"></span>Live ${section.label}<span class="accountInfo">&nbsp;&nbsp;${myusername.split("@")[0]}</span></div>` : ""}
+                            // build the panel once; later refreshes only update the value, so the
+                            // count-up has an old value to start from (and the sun keeps spinning)
+                            if (isNew) {
+                                netRevenue.innerHTML = `
+                                ${section.label === 'Today' ? `<div class="live-indicator"><span class="dot2 logoSun"></span>Live ${section.label}<span class="accountInfo">&nbsp;&nbsp;${username.split("@")[0]}</span></div>` : ""}
                                 <div class='tinyLabelDiv'>${toDisplay} Revenue (${item.unit ? item.unit : "MYR"})</div>
-                                <div style="display:inline-flex; ">${section.label === 'Today' ? "<div id='" + myusername + "_status' class='currentStatusIndicator'></div>" : ""}<div class='mainValueClass' id="mainValueDiv_${section.label}_${myusername}" >${valueToDisplay}</div></div><div id="mainValueDiv2_${section.label}_${myusername}" class="mainValueClass2"></div>`;
+                                <div style="display:inline-flex; ">${section.label === 'Today' ? "<div id='" + myusername + "_status' class='currentStatusIndicator'></div>" : ""}<div class='mainValueClass' id="mainValueDiv_${section.label}_${myusername}" >-</div></div><div id="mainValueDiv2_${section.label}_${myusername}" class="mainValueClass2"></div>`;
+                            }
+                            setPendingValue(netRevenue.querySelector('.mainValueClass'), valueToDisplay);
 
                             if (section.label === 'Last Month') {
                                 let canvasId = 'lastMonthDetailChart' + "_" + myusername;
@@ -1467,109 +1684,11 @@
             finally {
                 //log(available_accounts);
 
-                // Check if the element exists
-                const logoSunElement = document.getElementById('logoSun');
+                // animate this account's values to their final numbers for this refresh
+                commitPendingValues(document.getElementById("container_" + myusername));
 
-                if (logoSunElement) {
-
-
-                    // this overwrites any listener
-                    logoSunElement.onclick = function () {
-                        const container = document.createElement('div');
-                        container.style.textAlign = 'left';
-
-                        let accountSelected = getSavedAccounts();
-                        if (isBlank(accountSelected) == false) {
-                            accountSelected = JSON.parse(accountSelected);
-                        }
-
-
-                        available_accounts.forEach(user => {
-                            const label = document.createElement('label');
-                            label.style.display = 'block';
-                            label.style.fontSize = '28px'; // Set the font size
-                            label.style.margin = "10px";
-
-                            const checkbox = document.createElement('input');
-                            checkbox.type = 'checkbox';
-                            checkbox.name = 'user_cb';
-                            checkbox.value = user.min_vindex;
-                            checkbox.style.margin = '10px';
-                            checkbox.style.transform = 'scale(1.5)'; // makes checkbox 1.5 times bigger
-
-
-
-                            for (let i = 0; i < accountSelected.length; i++) {
-                                if (user.username == accountSelected[i].username) {
-                                    checkbox.checked = true;
-                                    break;
-                                }
-                            }
-
-                            label.appendChild(checkbox);
-                            label.appendChild(document.createTextNode(' ' + user.username));
-
-                            container.appendChild(label);
-                        });
-
-
-                        container.onchange = function (e) {
-
-                            if (e.target.type === 'checkbox') {
-                                let selectedUsersTemp = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
-                                    .map(cb => available_accounts.find(u => u.min_vindex === cb.value));
-
-                                selectedUsers = selectedUsersTemp;
-
-                                saveAccounts();
-                            }
-
-                        };
-
-
-                        // Show dialog
-                        const dialog = new SimpleDialog(container, {
-
-                            //// onClose listener
-                            onClose: async function () {
-                                //alert('Dialog was closed!');
-                                // Or do anything else here (like cleanup, reload, etc)
-
-                                stopRefetchInterval();
-                                showProgressDialog();
-
-
-
-                                let accountSelected = getSavedAccounts();
-                                if (isBlank(accountSelected) == false) {
-                                    accountSelected = JSON.parse(accountSelected);
-                                }
-
-
-                                if (accountSelected.length == 0) {
-                                    if (available_accounts.length != 0) {
-                                        let temp = [];
-                                        temp.push(available_accounts[0]);
-                                        selectedUsers = temp
-                                        saveAccounts();
-
-
-                                        safeReload();
-                                    }
-                                }
-                                else {
-
-
-                                    safeReload();
-                                }
-
-                            }
-                        });
-                        dialog.show();
-                    };
-
-
-                }
+                // the sun on every account panel opens the page settings (this overwrites any listener)
+                document.querySelectorAll(".logoSun").forEach(el => el.onclick = openPageSettingsDialog);
 
                 setTimeout(hideProgressDialog, 1000);
             }
@@ -1579,7 +1698,7 @@
 
 
         function getSelectedURL() {
-            let data = localStorage.getItem('TGSolar_selectedURL');
+            let data = localStorage.getItem('TGSolar_selectedURL_index4');
             if (isBlank(data) == true) {
                 ///
             }
@@ -1592,16 +1711,16 @@
         }
 
         function setSelectedURL(url) {
-            localStorage.setItem('TGSolar_selectedURL', url);
+            localStorage.setItem('TGSolar_selectedURL_index4', url);
         }
 
 
         function saveAccounts() {
-            localStorage.setItem('TGSolar_selectedUsers', JSON.stringify(selectedUsers));
+            localStorage.setItem('TGSolar_selectedUsers_index4', JSON.stringify(selectedUsers));
         }
 
         function getSavedAccounts() {
-            let data = localStorage.getItem('TGSolar_selectedUsers');
+            let data = localStorage.getItem('TGSolar_selectedUsers_index4');
             if (isBlank(data) == false) {
                 data = JSON.parse(data);
                 data.sort((a, b) => a.username.localeCompare(b.username));
@@ -1615,6 +1734,457 @@
 
         }
 
+
+        ///////// Pages (slides) /////////
+        // TGSolar_pages holds each page's usernames and how long it stays up, e.g.
+        // [{ "accounts": ["a@x.com","b@x.com"], "seconds": 30 }, { "accounts": ["a@x.com"], "seconds": 10 }].
+        // (The first version saved plain arrays of usernames; those still load, with the default seconds.)
+        // Each page is one slide with its own top totals, account columns and footer.
+        // An account can be on more than one page (see getSlotKey).
+
+        const defaultSlideSeconds = 20;  // how long a page stays up when not set
+        const slideSecondsOptions = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300]; // choices in Page Settings
+        const slidePauseSeconds = 60;    // after a manual move, wait longer before auto sliding again
+
+        let pages = [];                       // array of pages, each an array of account objects
+        let pageSeconds = [];                 // per page: seconds it stays up before sliding on
+        let accountColorHM = new Map();       // username -> border colour, same on every page
+        let pageRatios = [];                  // per page { min, max, live } (pages with 2 accounts)
+        let currentPage = 0;
+        let nextSlideAt = 0;
+        let slideTimerId = null;
+
+        function sortAccountsByUsername(accounts) {
+            return accounts.sort((a, b) => a.username.localeCompare(b.username));
+        }
+
+        function formatSeconds(seconds) {
+            if (seconds >= 60 && seconds % 60 == 0)
+                return (seconds / 60) + ' min';
+            return seconds + 's';
+        }
+
+        // Saved pages as [{ accounts, seconds }], checked against the server's accounts. Unknown accounts
+        // are dropped, an account is only kept once per page, and empty pages are removed.
+        // Nothing saved yet -> one page with the accounts selected before pages existed.
+        function getSavedPages() {
+            let accountsByName = new Map(available_accounts.map(user => [user.username, user]));
+            let result = [];
+
+            let saved = null;
+            try {
+                saved = JSON.parse(localStorage.getItem('TGSolar_pages'));
+            } catch (err) {
+                saved = null;
+            }
+
+            if (Array.isArray(saved)) {
+                saved.forEach(savedPage => {
+                    // old format: a plain array of usernames
+                    let usernames = Array.isArray(savedPage) ? savedPage : (savedPage && Array.isArray(savedPage.accounts) ? savedPage.accounts : null);
+                    if (usernames == null)
+                        return;
+
+                    let seconds = parseInt(savedPage.seconds);
+                    if (isNaN(seconds) || seconds < 1)
+                        seconds = defaultSlideSeconds;
+
+                    let pageAccounts = [];
+                    let used = new Set();
+                    usernames.forEach(username => {
+                        if (accountsByName.has(username) && used.has(username) == false) {
+                            used.add(username);
+                            pageAccounts.push(accountsByName.get(username));
+                        }
+                    });
+
+                    if (pageAccounts.length != 0)
+                        result.push({ accounts: sortAccountsByUsername(pageAccounts), seconds: seconds });
+                });
+            }
+
+            if (result.length == 0) {
+                let pageAccounts = JSON.parse(getSavedAccounts())
+                    .filter(user => accountsByName.has(user.username))
+                    .map(user => accountsByName.get(user.username));
+
+                if (pageAccounts.length == 0 && available_accounts.length != 0)
+                    pageAccounts.push(available_accounts[0]);
+
+                if (pageAccounts.length != 0)
+                    result.push({ accounts: sortAccountsByUsername(pageAccounts), seconds: defaultSlideSeconds });
+            }
+
+            return result;
+        }
+
+        // pagesToSave: [{ accounts: [account objects], seconds }]
+        function savePages(pagesToSave) {
+            localStorage.setItem('TGSolar_pages', JSON.stringify(pagesToSave.map(page => ({
+                accounts: page.accounts.map(user => user.username),
+                seconds: page.seconds
+            }))));
+
+            // keep the shared selection (used by the other dashboards) in step: every account on any page, once
+            selectedUsers = [...new Map(pagesToSave.flatMap(page => page.accounts).map(user => [user.username, user])).values()];
+            saveAccounts();
+        }
+
+        // page elements share a base id, with the page index at the end: divTodayTotal_Today_p0
+        function getPageElement(baseId, pageIndex) {
+            return document.getElementById(baseId + "_p" + pageIndex);
+        }
+
+        // Page settings: a grid of checkboxes, one row per account, one column per page.
+        // An account can be ticked on several pages. Each column has a ✕ to remove the page and a
+        // "Show for" dropdown (how long the page stays up). Reloads when something changed.
+        function openPageSettingsDialog() {
+            const content = document.createElement('div');
+            content.className = 'pageSettings';
+
+            const title = document.createElement('h2');
+            title.textContent = 'Page Settings';
+            content.appendChild(title);
+
+            const table = document.createElement('table');
+            const headerRow = document.createElement('tr');
+            headerRow.appendChild(document.createElement('th'));
+            table.appendChild(headerRow);
+
+            const rows = new Map(); // username -> <tr>
+            available_accounts.forEach(user => {
+                const row = document.createElement('tr');
+                const name = document.createElement('td');
+                name.className = 'pageSettingsName';
+                name.textContent = user.username;
+                row.appendChild(name);
+                table.appendChild(row);
+                rows.set(user.username, row);
+            });
+
+            const secondsRow = document.createElement('tr');
+            secondsRow.className = 'pageSettingsSecondsRow';
+            const secondsLabel = document.createElement('td');
+            secondsLabel.className = 'pageSettingsName';
+            secondsLabel.textContent = 'Show for';
+            secondsRow.appendChild(secondsLabel);
+            table.appendChild(secondsRow);
+
+            // one entry per column, in order: { header, label, cells: [<td>], checkboxes: Map(username -> checkbox), secondsSelect }
+            let columns = [];
+
+            function renumberColumns() {
+                columns.forEach((column, i) => column.label.textContent = 'Page ' + (i + 1));
+            }
+
+            function addPageColumn(pageAccounts, seconds) {
+                let column = { cells: [], checkboxes: new Map() };
+
+                column.header = document.createElement('th');
+                column.label = document.createElement('span');
+                column.header.appendChild(column.label);
+
+                const removeButton = document.createElement('button');
+                removeButton.className = 'pageSettingsRemove';
+                removeButton.textContent = '✕';
+                removeButton.title = 'Remove this page';
+                removeButton.onclick = function () {
+                    column.header.remove();
+                    column.cells.forEach(cell => cell.remove());
+                    columns = columns.filter(c => c !== column);
+                    renumberColumns();
+                };
+                column.header.appendChild(removeButton);
+                headerRow.appendChild(column.header);
+
+                rows.forEach((row, username) => {
+                    const cell = document.createElement('td');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = pageAccounts.some(u => u.username == username);
+                    cell.appendChild(checkbox);
+                    row.appendChild(cell);
+                    column.cells.push(cell);
+                    column.checkboxes.set(username, checkbox);
+                });
+
+                const secondsCell = document.createElement('td');
+                column.secondsSelect = document.createElement('select');
+                let options = slideSecondsOptions.includes(seconds) ? slideSecondsOptions : [...slideSecondsOptions, seconds].sort((a, b) => a - b);
+                options.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = formatSeconds(value);
+                    column.secondsSelect.appendChild(option);
+                });
+                column.secondsSelect.value = seconds;
+                secondsCell.appendChild(column.secondsSelect);
+                secondsRow.appendChild(secondsCell);
+                column.cells.push(secondsCell);
+
+                columns.push(column);
+                renumberColumns();
+            }
+
+            // the current pages, plus one empty page to add to
+            pages.forEach((pageAccounts, i) => addPageColumn(pageAccounts, pageSeconds[i] || defaultSlideSeconds));
+            addPageColumn([], defaultSlideSeconds);
+
+            content.appendChild(table);
+
+            const note = document.createElement('div');
+            note.className = 'pageSettingsNote';
+            note.textContent = 'Ticked accounts on the same page are shown side by side. An account can be on more than one page. ✕ removes a page; a page with nothing ticked is skipped too. "Show for" is how long the page stays up before sliding to the next.';
+            content.appendChild(note);
+
+            const buttons = document.createElement('div');
+            buttons.className = 'pageSettingsButtons';
+
+            const addButton = document.createElement('button');
+            addButton.className = 'pageSettingsButton pageSettingsButtonSecondary';
+            addButton.textContent = '+ Add Page';
+            addButton.onclick = function () {
+                addPageColumn([], defaultSlideSeconds);
+            };
+            buttons.appendChild(addButton);
+
+            const doneButton = document.createElement('button');
+            doneButton.className = 'pageSettingsButton';
+            doneButton.textContent = 'Done';
+            buttons.appendChild(doneButton);
+
+            content.appendChild(buttons);
+
+            const dialog = new SimpleDialog(content, {
+                onClose: function () {
+                    let newPages = [];
+
+                    // columns in order; empty ones just disappear
+                    columns.forEach(column => {
+                        let pageAccounts = available_accounts.filter(u => column.checkboxes.get(u.username).checked);
+
+                        if (pageAccounts.length != 0)
+                            newPages.push({ accounts: sortAccountsByUsername(pageAccounts), seconds: parseInt(column.secondsSelect.value) });
+                    });
+
+                    // nothing selected -> default to the first account
+                    if (newPages.length == 0 && available_accounts.length != 0)
+                        newPages.push({ accounts: [available_accounts[0]], seconds: defaultSlideSeconds });
+
+                    let oldValue = JSON.stringify(pages.map((p, i) => [p.map(u => u.username), pageSeconds[i]]));
+                    let newValue = JSON.stringify(newPages.map(p => [p.accounts.map(u => u.username), p.seconds]));
+                    if (oldValue == newValue)
+                        return;
+
+                    savePages(newPages);
+
+                    stopRefetchInterval();
+                    stopSlideTimer();
+                    showProgressDialog();
+
+                    safeReload();
+                }
+            });
+
+            doneButton.onclick = function () {
+                dialog.close();
+            };
+
+            dialog.show();
+        }
+
+        // Builds one slide per page: top totals, the row the account columns go into, and the footer.
+        function buildPages() {
+            let topColor = getColorRemaining(); // same colour for every page's top
+
+            const slider = document.createElement('div');
+            slider.id = "slider";
+
+            const track = document.createElement('div');
+            track.id = "sliderTrack";
+
+            pages.forEach((pageAccounts, pageIndex) => {
+                pageRatios[pageIndex] = { min: "", max: "", live: "" };
+
+                const page = document.createElement('div');
+                page.className = "page";
+                page.id = "page_" + pageIndex;
+
+                page.appendChild(createTopContainer(pageIndex, topColor));
+
+                const containerMain = document.createElement('div');
+                containerMain.className = "containerMain";
+                containerMain.id = "containerMain_" + pageIndex;
+                page.appendChild(containerMain);
+
+                page.appendChild(createPageFooter(pageIndex, pageAccounts));
+
+                track.appendChild(page);
+            });
+
+            slider.appendChild(track);
+            document.body.appendChild(slider);
+
+            if (pages.length > 1) {
+                const dots = document.createElement('div');
+                dots.id = "pageDots";
+
+                pages.forEach((pageAccounts, pageIndex) => {
+                    const dot = document.createElement('div');
+                    dot.className = "pageDot";
+                    dot.title = "Page " + (pageIndex + 1) + " (" + formatSeconds(getPageSeconds(pageIndex)) + "): " + pageAccounts.map(u => u.username.split("@")[0]).join(", ");
+                    dot.onclick = function () {
+                        manualGoToPage(pageIndex);
+                    };
+                    dots.appendChild(dot);
+                });
+
+                document.body.appendChild(dots);
+
+                document.addEventListener('keydown', function (e) {
+                    if (document.querySelector('.simple-dialog-overlay'))
+                        return; // a dialog is open
+
+                    if (e.key === 'ArrowRight')
+                        manualGoToPage(currentPage + 1);
+                    else if (e.key === 'ArrowLeft')
+                        manualGoToPage(currentPage - 1);
+                });
+
+                // swipe on touch screens
+                let touchStartX = null;
+                slider.addEventListener('touchstart', function (e) {
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+                slider.addEventListener('touchend', function (e) {
+                    if (touchStartX === null)
+                        return;
+                    let dx = e.changedTouches[0].clientX - touchStartX;
+                    touchStartX = null;
+                    if (Math.abs(dx) > 50)
+                        manualGoToPage(currentPage + (dx < 0 ? 1 : -1));
+                });
+            }
+
+            // stay on the same page across the hourly reload
+            let savedPage = 0;
+            try {
+                savedPage = parseInt(sessionStorage.getItem('TGSolar_index4_page')) || 0;
+            } catch (err) {
+                savedPage = 0;
+            }
+            goToPage(Math.min(savedPage, pages.length - 1), false);
+        }
+
+        // Footer: Max PV under each account. A page of exactly 2 accounts also gets the ratio in between.
+        function createPageFooter(pageIndex, pageAccounts) {
+            const footer = document.createElement('div');
+            footer.className = "pageFooter";
+            footer.id = "bottomFooterContainer_p" + pageIndex;
+
+            pageAccounts.forEach((user, i) => {
+                if (i == 1 && pageAccounts.length == 2) {
+                    const ratioElement = document.createElement('div');
+                    ratioElement.className = "accountRatio";
+                    ratioElement.id = "accountRatio_p" + pageIndex;
+                    footer.appendChild(ratioElement);
+                }
+
+                const maxPV = document.createElement('div');
+                maxPV.className = "maxPV";
+                maxPV.id = "maxPV_" + getSlotKey(user.username, pageIndex);
+                maxPV.dataset.username = user.username;
+                footer.appendChild(maxPV);
+            });
+
+            return footer;
+        }
+
+        function renderPageRatio(pageIndex) {
+            let ratioElement = getPageElement("accountRatio", pageIndex);
+            if (!ratioElement)
+                return;
+
+            let ratio = pageRatios[pageIndex];
+            ratioElement.innerHTML = `
+    <span class="ratio-label">Ratio:</span>
+    <span class="val-min">(Min) ${ratio.min}</span>
+    <span class="val-curr">(Live) ${ratio.live}</span>
+    <span class="val-max">(Max) ${ratio.max}</span>
+`;
+        }
+
+        // record day revenue of the accounts on this page
+        function loadHighestRevenue(pageIndex) {
+            fetch(url + '/getHighestRevenueByUsernames', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    formData: {
+                        usernames: pages[pageIndex].map(u => u.username)
+                    }
+                })
+            }).then(res => res.json()).then(data => {
+                animateNumber(getPageElement('divTotal_Highest', pageIndex), data.highest);
+                getPageElement('divTotal_HighestTime', pageIndex).innerHTML = data.time;
+            }).catch(err => {
+                console.log("loadHighestRevenue error (page " + (pageIndex + 1) + "): " + err);
+            });
+        }
+
+        function goToPage(index, animate = true) {
+            if (pages.length == 0)
+                return;
+
+            currentPage = (index + pages.length) % pages.length;
+
+            const track = document.getElementById("sliderTrack");
+            track.style.transition = animate ? "" : "none";
+            track.style.transform = "translateX(-" + (currentPage * 100) + "%)";
+
+            document.querySelectorAll('.pageDot').forEach((dot, i) => dot.classList.toggle('active', i == currentPage));
+
+            try {
+                sessionStorage.setItem('TGSolar_index4_page', currentPage);
+            } catch (err) {
+                // private mode etc, not important
+            }
+        }
+
+        function getPageSeconds(pageIndex) {
+            return pageSeconds[pageIndex] || defaultSlideSeconds;
+        }
+
+        function manualGoToPage(index) {
+            goToPage(index);
+            nextSlideAt = Date.now() + slidePauseSeconds * 1000;
+        }
+
+        function startSlideTimer() {
+            stopSlideTimer();
+
+            if (pages.length < 2)
+                return;
+
+            nextSlideAt = Date.now() + getPageSeconds(currentPage) * 1000;
+
+            slideTimerId = setInterval(() => {
+                if (Date.now() >= nextSlideAt) {
+                    goToPage(currentPage + 1);
+                    nextSlideAt = Date.now() + getPageSeconds(currentPage) * 1000; // the new page's own time
+                }
+            }, 1000);
+        }
+
+        function stopSlideTimer() {
+            if (slideTimerId) {
+                clearInterval(slideTimerId);
+                slideTimerId = null;
+            }
+        }
+        /////////
 
         var available_accounts = [];
 
@@ -1672,7 +2242,7 @@
             {
                 // manually
                 if (manualFixData == true) {
-                    document.getElementById("mainValueDiv_Last Month_" + myusername).innerText = Math.round(totalNetRevenue);
+                    setPendingValue(document.getElementById("mainValueDiv_Last Month_" + myusername), Math.round(totalNetRevenue));
                     dataHM.set("Last Month_" + myusername, Math.round(totalNetRevenue));
                 }
             }
@@ -1863,14 +2433,14 @@
 
                 // this month
                 let valueYesterday = Math.round(totalRevenueThisMonthAndCurrent);
-                document.getElementById("mainValueDiv_Yesterday_" + myusername).innerText = (valueYesterday || "-");
+                setPendingValue(document.getElementById("mainValueDiv_Yesterday_" + myusername), (valueYesterday || "-"));
                 log("valueYesterday | " + myusername + " | " + valueYesterday);
                 dataHM.set("ThisMonth_" + myusername, valueYesterday);
 
 
                 /// yesterday
                 let valueToday = Math.round(dataHM.get("Yesterday" + "_" + myusername));
-                document.getElementById("mainValueDiv2_Today_" + myusername).innerText = (valueToday || "-");
+                setPendingValue(document.getElementById("mainValueDiv2_Today_" + myusername), (valueToday || "-"));
 
 
                 // log("Test 1: " + valueYesterday + " | " + totalRevenueThisMonth + " | " + valueToday);
@@ -2395,7 +2965,7 @@
             {
                 log("manually set today");
 
-                document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText = Math.round(cumulative);
+                setPendingValue(document.getElementById("mainValueDiv_Today" + "_" + myusername), Math.round(cumulative));
 
                 dataHM.set("Today_" + myusername, Math.round(cumulative));
 
@@ -2407,7 +2977,7 @@
                 let yesterdayDataTemp = thisMonthDataDetailChat.data.datasets[0].data[yesterdayIndexTemp];
                 log("yesterdayDataTest: " + yesterdayDataTemp);
 
-                document.getElementById("mainValueDiv2_Today" + "_" + myusername).innerText = Math.round(yesterdayDataTemp) || "-";
+                setPendingValue(document.getElementById("mainValueDiv2_Today" + "_" + myusername), Math.round(yesterdayDataTemp) || "-");
 
 
                 dataHM.set("Yesterday_" + myusername, Math.round(yesterdayDataTemp) || 0);
@@ -2422,14 +2992,15 @@
                 // totalMonthValue = parseInt(totalMonthValue)
                 // log("totalMonthValue: " + totalMonthValue + " | " + myusername);
 
-                let mainValueDiv_Today = document.getElementById("mainValueDiv_Today" + "_" + myusername).innerText;
+                // read from dataHM, not the element: the element still shows the old value until commitPendingValues
+                let mainValueDiv_Today = dataHM.get("Today_" + myusername);
 
                 // mainValueDiv_Today = parseInt(mainValueDiv_Today) + totalMonthValue;  // total month value + today value
 
                 let totalThisMonthWithoutToday = parseFloat(dataHM.get("ThisMonth_" + myusername));
                 let totalThisMonth = parseInt(mainValueDiv_Today) + totalThisMonthWithoutToday;
 
-                document.getElementById("mainValueDiv_Yesterday" + "_" + myusername).innerText = totalThisMonth || "-";
+                setPendingValue(document.getElementById("mainValueDiv_Yesterday" + "_" + myusername), totalThisMonth || "-");
 
                 // for other than account 1, dont save the total
                 dataHM.set("ThisMonth_" + myusername, totalThisMonthWithoutToday);
@@ -2778,9 +3349,139 @@
         let usernamesHM = new Map();
 
 
-        var minRatio = "";
-        var maxRatio = "";
-        var currentRatio = "";
+        // Top totals of one page (only the accounts on that page are added up).
+        // Element ids end with the page index, see getPageElement.
+        function createTopContainer(pageIndex, mainColor) {
+            const gradientString = makeGradientFromMainColor(mainColor);
+            let container = document.createElement('div');
+            container.id = "container_top_p" + pageIndex;
+            container.className = 'divAccountContainerTop';
+            container.style.borderColor = mainColor;
+            container.style.setProperty('--border-gradient', gradientString);
+            container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
+
+            ///
+            const divLastMonthTotalMain = document.createElement('div');
+            divLastMonthTotalMain.style.display = "grid";
+            divLastMonthTotalMain.style.justifyItems = "center";
+
+            const divTotalThisMonthMain = document.createElement('div');
+            divTotalThisMonthMain.style.display = "grid";
+            divTotalThisMonthMain.style.justifyItems = "center";
+
+            const divTodayTotalMain = document.createElement('div');
+            divTodayTotalMain.style.display = "grid";
+            divTodayTotalMain.style.justifyItems = "center";
+
+
+            ///// total last month
+
+            let labelThisLastTotal = document.createElement('label');
+            labelThisLastTotal.className = "labelTotal";
+            labelThisLastTotal.appendChild(document.createTextNode('Last Month'));
+
+
+            const divLastMonthTotal = document.createElement('div');
+            divLastMonthTotal.id = "divTodayLastMonth_Today_p" + pageIndex;
+            divLastMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+            divLastMonthTotal.innerHTML = "-";
+
+            divLastMonthTotalMain.appendChild(labelThisLastTotal);
+            divLastMonthTotalMain.appendChild(divLastMonthTotal);
+            container.appendChild(divLastMonthTotalMain);
+
+
+            ////////// total this month
+
+
+            let labelThisMonthTotal = document.createElement('label');
+            labelThisMonthTotal.className = "labelTotal";
+            labelThisMonthTotal.appendChild(document.createTextNode('This Month'));
+
+
+            const divThisMonthTotal = document.createElement('div');
+            divThisMonthTotal.id = "divTodayThisMonth_Today_p" + pageIndex;
+            divThisMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+            divThisMonthTotal.innerHTML = "-";
+
+            divTotalThisMonthMain.appendChild(labelThisMonthTotal);
+
+            let divThisMonthTotal_Layout = document.createElement('div');
+            divThisMonthTotal_Layout.style.display = "inline-flex";
+
+            divThisMonthTotal_Layout.appendChild(divThisMonthTotal);
+            divTotalThisMonthMain.appendChild(divThisMonthTotal_Layout);
+
+
+            container.appendChild(divTotalThisMonthMain);
+
+
+            //////  today total
+            let labelToday = document.createElement('label');
+            labelToday.className = "labelTotal";
+            labelToday.appendChild(document.createTextNode('Today'));
+
+            let sunTotalToday = document.createElement('span');
+            sunTotalToday.className = "dot2";
+
+            sunTotalToday.onclick = function () {
+                window.location.href = "/index";
+                setSelectedURL("/index");
+            };
+
+
+            const divTodayLayout = document.createElement('div');
+            divTodayLayout.style.display = "inline-flex";
+
+
+            const divTodayTotal = document.createElement('div');
+            divTodayTotal.id = "divTodayTotal_Today_p" + pageIndex;
+            divTodayTotal.innerHTML = "-";
+            divTodayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
+
+            const divYesterdayTotal = document.createElement('div');
+            divYesterdayTotal.id = "divTotal_Yesterday_p" + pageIndex;
+            divYesterdayTotal.innerHTML = "-";
+            divYesterdayTotal.className = "mainValueClass2";
+            divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); margin-top: 1px";
+
+            const divHighestTime = document.createElement('div');
+            divHighestTime.id = "divTotal_HighestTime_p" + pageIndex;
+            divHighestTime.innerHTML = "";
+            divHighestTime.style = "font-size: 0.16em; color: #aaa; letter-spacing: 1px; margin-bottom: -20px;";
+
+            const divHighestTotal = document.createElement('div');
+            divHighestTotal.id = "divTotal_Highest_p" + pageIndex;
+            divHighestTotal.innerHTML = "-";
+            divHighestTotal.className = "mainValueClass2";
+            divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2; margin-top: 0;";
+
+            const divHighestGroup = document.createElement('div');
+            divHighestGroup.style = "display: flex; flex-direction: column; align-items: center; margin-top: 20px;";
+            divHighestGroup.appendChild(divHighestTime);
+            divHighestGroup.appendChild(divHighestTotal);
+
+            const divRightColumn = document.createElement('div');
+
+            divRightColumn.appendChild(divYesterdayTotal);
+            divRightColumn.appendChild(divHighestGroup);
+
+            divTodayLayout.appendChild(divTodayTotal);
+            divTodayLayout.appendChild(divRightColumn);
+
+            const divTodayTotal_Top = document.createElement('div');
+            divTodayTotal_Top.style = "display: inline-flex;align-items: center;";
+            divTodayTotal_Top.appendChild(sunTotalToday)
+            divTodayTotal_Top.appendChild(labelToday);
+
+            divTodayTotalMain.appendChild(divTodayTotal_Top)
+            divTodayTotalMain.appendChild(divTodayLayout);
+
+            container.appendChild(divTodayTotalMain);
+            //////////
+
+            return container;
+        }
 
         $(document).ready(async function () {
 
@@ -2789,7 +3490,7 @@
 
             getSelectedURL();
 
-            available_accounts = await getAllAccount(); // get all account from server           
+            available_accounts = await getAllAccount(); // get all account from server
 
             log(available_accounts);
 
@@ -2799,340 +3500,54 @@
             });
 
 
-            // init top
-            {
-                let mainColor = getColorRemaining();
-                const gradientString = makeGradientFromMainColor(mainColor);
-                let container = document.createElement('div');
-                container.id = "container_top";
-                container.className = 'divAccountContainerTop';
-                container.style.borderColor = mainColor;
-                container.style.setProperty('--border-gradient', gradientString);
-                container.style.boxShadow = "inset 0 0 0 4px " + mainColor;
-
-                ///
-                const divLastMonthTotalMain = document.createElement('div');
-                divLastMonthTotalMain.style.display = "grid";
-                divLastMonthTotalMain.style.justifyItems = "center";
-
-                const divTotalThisMonthMain = document.createElement('div');
-                divTotalThisMonthMain.style.display = "grid";
-                divTotalThisMonthMain.style.justifyItems = "center";
-
-                const divTodayTotalMain = document.createElement('div');
-                divTodayTotalMain.style.display = "grid";
-                divTodayTotalMain.style.justifyItems = "center";
-
-
-                ///// total last month
-
-                let labelThisLastTotal = document.createElement('label');
-                labelThisLastTotal.className = "labelTotal";
-                labelThisLastTotal.appendChild(document.createTextNode('Last Month'));
-
-
-                const divLastMonthTotal = document.createElement('div');
-                divLastMonthTotal.id = "divTodayLastMonth_Today";
-                divLastMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
-                divLastMonthTotal.innerHTML = "-";
-
-                divLastMonthTotalMain.appendChild(labelThisLastTotal);
-                divLastMonthTotalMain.appendChild(divLastMonthTotal);
-                container.appendChild(divLastMonthTotalMain);
-
-
-                ////////// total this month
-
-
-                let labelThisMonthTotal = document.createElement('label');
-                labelThisMonthTotal.className = "labelTotal";
-                labelThisMonthTotal.appendChild(document.createTextNode('This Month'));
-
-
-                const divThisMonthTotal = document.createElement('div');
-                divThisMonthTotal.id = "divTodayThisMonth_Today";
-                divThisMonthTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
-                divThisMonthTotal.innerHTML = "-";
-
-                divTotalThisMonthMain.appendChild(labelThisMonthTotal);
-
-                let divThisMonthTotal_Layout = document.createElement('div');
-                divThisMonthTotal_Layout.style.display = "inline-flex";
-
-                divThisMonthTotal_Layout.appendChild(divThisMonthTotal);
-                divTotalThisMonthMain.appendChild(divThisMonthTotal_Layout);
-
-
-                container.appendChild(divTotalThisMonthMain);
-
-
-                //////  today total
-                let labelToday = document.createElement('label');
-                labelToday.className = "labelTotal";
-                labelToday.appendChild(document.createTextNode('Today'));
-
-                let sunTotalToday = document.createElement('span');
-                sunTotalToday.className = "dot2";
-
-                sunTotalToday.onclick = function () {
-                    window.location.href = "/index";
-                    setSelectedURL("/index");
-                };
-
-
-                const divTodayLayout = document.createElement('div');
-                divTodayLayout.style.display = "inline-flex";
-
-
-                const divTodayTotal = document.createElement('div');
-                divTodayTotal.id = "divTodayTotal_Today";
-                divTodayTotal.innerHTML = "-";
-                divTodayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1);";
-
-                const divYesterdayTotal = document.createElement('div');
-                divYesterdayTotal.id = "divTotal_Yesterday";
-                divYesterdayTotal.innerHTML = "-";
-                divYesterdayTotal.className = "mainValueClass2";
-                divYesterdayTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); margin-top: 1px";
-
-                const divHighestTime = document.createElement('div');
-                divHighestTime.id = "divTotal_HighestTime";
-                divHighestTime.innerHTML = "";
-                divHighestTime.style = "font-size: 0.16em; color: #aaa; letter-spacing: 1px; margin-bottom: -20px;";
-
-                const divHighestTotal = document.createElement('div');
-                divHighestTotal.id = "divTotal_Highest";
-                divHighestTotal.innerHTML = "-";
-                divHighestTotal.className = "mainValueClass2";
-                divHighestTotal.style = "text-shadow: 10px 10px 10px rgb(69, 69, 1); color: #00FFF2; margin-top: 0;";
-
-                const divHighestGroup = document.createElement('div');
-                divHighestGroup.style = "display: flex; flex-direction: column; align-items: center; margin-top: 20px;";
-                divHighestGroup.appendChild(divHighestTime);
-                divHighestGroup.appendChild(divHighestTotal);
-
-                const divRightColumn = document.createElement('div');
-
-                divRightColumn.appendChild(divYesterdayTotal);
-                divRightColumn.appendChild(divHighestGroup);
-
-                divTodayLayout.appendChild(divTodayTotal);
-                divTodayLayout.appendChild(divRightColumn);
-
-                const divTodayTotal_Top = document.createElement('div');
-                divTodayTotal_Top.style = "display: inline-flex;align-items: center;";
-                divTodayTotal_Top.appendChild(sunTotalToday)
-                divTodayTotal_Top.appendChild(labelToday);
-
-                divTodayTotalMain.appendChild(divTodayTotal_Top)
-                divTodayTotalMain.appendChild(divTodayLayout);
-
-                container.appendChild(divTodayTotalMain);
-                //////////
-
-                document.body.appendChild(container);
-
-
-            }
-
-
-
-
-
             if (available_accounts != "") {
-                let countMatch = 0;
+                // saved pages, checked against the server (falls back to the old selection / first account)
+                let savedPages = getSavedPages();
+                savePages(savedPages);
 
-                // double check with server
-                let accountSelected = getSavedAccounts();
+                pages = savedPages.map(page => page.accounts);
+                pageSeconds = savedPages.map(page => page.seconds);
 
-                if (accountSelected != null) {
-                    accountSelected = JSON.parse(accountSelected);
+                log("pages: " + JSON.stringify(pages.map(p => p.map(u => u.username))));
 
-                    if (accountSelected.length != 0) {
-                        available_accounts.forEach(user => {
-                            if (isBlank(accountSelected) == false) {
-                                firstUsernameInit = accountSelected[0].username;
+                buildPages();
 
-                                for (let i = 0; i < accountSelected.length; i++) {
-                                    if (user.username == accountSelected[i].username) {
-                                        countMatch = countMatch + 1;
-                                    }
-                                }
-                            }
-                        });
+                await startRefetchInterval();
 
-                        if (countMatch == accountSelected.length) {
-                            log("OK MATCH");
-                            //log(firstUsernameInit);
-                            //log(accountSelected)
-
-
-
-                            await startRefetchInterval();
-                        }
-                    }
-                    else // account selected
-                    {
-                        let temp = [];
-                        temp.push(available_accounts[0]);
-                        selectedUsers = temp
-                        saveAccounts();
-
-
-
-
-                        await startRefetchInterval();
-
-
-                    }
-                }
-                else // new clean init
-                {
-                    ///
-                    let temp = [];
-                    temp.push(available_accounts[0]);
-                    selectedUsers = temp
-                    saveAccounts();
-
-
-
-                    //////
-                    await startRefetchInterval();
-                }
+                startSlideTimer();
             }
 
 
 
-            /// get min and max ratios
-            getHistoryRatios().then(data => {
-                try {
-                    minRatio = data.min.toFixed(2);
-                    maxRatio = data.max.toFixed(2);
+            /// get min and max ratios per page (same pair as the live ratio: the page's 2 accounts)
+            pages.forEach((pageAccounts, pageIndex) => {
+                if (pageAccounts.length != 2)
+                    return;
 
-                    //log("ABC");
-                    //log(minRatio + " | " + maxRatio);
+                getHistoryRatios(pageAccounts[0].username, pageAccounts[1].username).then(data => {
+                    try {
+                        pageRatios[pageIndex].min = data.min != null ? data.min.toFixed(2) : "-";
+                        pageRatios[pageIndex].max = data.max != null ? data.max.toFixed(2) : "-";
 
-                    let footer = document.getElementById("bottomFooterContainer");
-                    if (!footer) {
-                        footer = document.createElement('div');
-                        footer.id = "bottomFooterContainer";
-                        // footer.style.position = 'fixed';
-                        footer.style.bottom = '0';
-                        footer.style.left = '0';
-                        // footer.style.width = '100%';
-                        footer.style.zIndex = '1000';
-                        footer.style.display = 'flex';
-                        footer.style.flexDirection = 'row';
-                        footer.style.justifyContent = 'space-between';
-                        footer.style.alignItems = 'center';
-                        footer.style.padding = '0 50px 10px 50px';
-                        footer.style.pointerEvents = 'none';
-                        document.body.appendChild(footer);
+                        renderPageRatio(pageIndex);
                     }
-
-                    // Ensure we have placeholders for PV left and right
-                    if (!document.getElementById("maxPV_left")) {
-                        let leftPlaceholder = document.createElement('div');
-                        leftPlaceholder.id = "maxPV_left";
-                        leftPlaceholder.style.width = '20%';
-                        leftPlaceholder.style.color = '#ff0000';
-                        leftPlaceholder.style.fontSize = '1vw';
-                        leftPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
-                        leftPlaceholder.style.fontFamily = 'Courier New';
-                        footer.insertBefore(leftPlaceholder, footer.firstChild);
+                    catch (err) {
+                        console.log(err);
                     }
-
-                    let ratioElement = document.getElementById("accountRatio");
-                    if (!ratioElement) {
-                        ratioElement = document.createElement('div');
-                        ratioElement.id = "accountRatio";
-                        ratioElement.style.color = 'white';
-                        ratioElement.style.fontSize = '2vw';
-                        ratioElement.style.fontFamily = 'Courier New';
-                        ratioElement.style.textAlign = 'center';
-                        ratioElement.style.flex = '1';
-                        footer.appendChild(ratioElement);
-                    }
-
-                    if (!document.getElementById("maxPV_right")) {
-                        let rightPlaceholder = document.createElement('div');
-                        rightPlaceholder.id = "maxPV_right";
-                        rightPlaceholder.style.width = '20%';
-                        rightPlaceholder.style.color = '#ff0000';
-                        rightPlaceholder.style.fontSize = '1vw';
-                        rightPlaceholder.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
-                        rightPlaceholder.style.fontFamily = 'Courier New';
-                        rightPlaceholder.style.textAlign = 'right';
-                        footer.appendChild(rightPlaceholder);
-                    }
-
-                    ratioElement.innerHTML = `
-    <span class="ratio-label">Ratio:</span> 
-    <span class="val-min">(Min) ${minRatio}</span> 
-    <span class="val-curr">(Live) ${currentRatio}</span> 
-    <span class="val-max">(Max) ${maxRatio}</span>
-`;
-                }
-                catch (err) {
-                    console.log(err);
-                }
-
+                });
             });
 
-            /// get history max PV
+            /// get history max PV, shown under each account (matched by username, .maxPV[data-username])
             getHistoryMaxPVData().then(data => {
                 try {
-                    if (data && data.length >= 2) {
-
-                        let footer = document.getElementById("bottomFooterContainer");
-                        if (!footer) {
-                            footer = document.createElement('div');
-                            footer.id = "bottomFooterContainer";
-                            // footer.style.position = 'fixed';
-                            footer.style.bottom = '0';
-                            footer.style.left = '0';
-                            // footer.style.width = '100%';
-                            footer.style.zIndex = '1000';
-                            footer.style.display = 'flex';
-                            footer.style.flexDirection = 'row';
-                            footer.style.justifyContent = 'space-between';
-                            footer.style.alignItems = 'center';
-                            footer.style.padding = '0 50px 10px 50px';
-                            footer.style.pointerEvents = 'none';
-                            document.body.appendChild(footer);
+                    data.forEach(row => {
+                        if (row.max != null && isFinite(row.max)) {
+                            // every page the account is on
+                            document.querySelectorAll(`.maxPV[data-username="${row.username}"]`).forEach(maxPV => {
+                                maxPV.innerHTML = `Max PV: ${Number(row.max).toFixed(1)} kW`;
+                            });
                         }
-
-                        // Ensure elements exist to be updated
-                        let maxPV_left = document.getElementById("maxPV_left");
-                        if (!maxPV_left) {
-                            maxPV_left = document.createElement('div');
-                            maxPV_left.id = "maxPV_left";
-                            maxPV_left.style.width = '20%';
-                            maxPV_left.style.color = '#ff0000';
-                            maxPV_left.style.fontSize = '1vw';
-                            maxPV_left.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
-                            maxPV_left.style.fontFamily = 'Courier New';
-                            footer.insertBefore(maxPV_left, footer.firstChild);
-                        }
-
-                        let maxPV_right = document.getElementById("maxPV_right");
-                        if (!maxPV_right) {
-                            maxPV_right = document.createElement('div');
-                            maxPV_right.id = "maxPV_right";
-                            maxPV_right.style.width = '20%';
-                            maxPV_right.style.color = '#ff0000';
-                            maxPV_right.style.fontSize = '1vw';
-                            maxPV_right.style.textShadow = 'rgb(255 255 255 / 99%) 0px 0px 9px';
-                            maxPV_right.style.fontFamily = 'Courier New';
-                            maxPV_right.style.textAlign = 'right';
-                            footer.appendChild(maxPV_right);
-                        }
-
-                        // Match accounts and display
-                        // data[0] is tgrsolar (first), data[1] is tgrsolar1 (second)
-                        maxPV_left.innerHTML = `Max PV: ${data[0].max.toFixed(1)} kW`;
-                        maxPV_right.innerHTML = `Max PV: ${data[1].max.toFixed(1)} kW`;
-                    }
+                    });
                 } catch (err) {
                     console.log(err);
                 }
@@ -3160,19 +3575,11 @@
         async function startRefetchInterval() {
             // Optionally clear an old interval
 
-            // one-time fetch highest revenue
-            fetch(url + '/getHighestRevenue').then(res => res.json()).then(data => {
-                document.getElementById('divTotal_Highest').innerHTML = data.highest;
+            // one-time fetch highest revenue, per page
+            pages.forEach((pageAccounts, pageIndex) => loadHighestRevenue(pageIndex));
 
-                document.getElementById('divTotal_HighestTime').innerHTML = data.time;
-            });
-
-            let accountSelected = getSavedAccounts();
-            if (isBlank(accountSelected) == false) {
-                accountSelected = JSON.parse(accountSelected);
-
-                await refetchDataAll(accountSelected);
-
+            if (pages.length != 0) {
+                await refetchDataAll(pages);
             }
 
 
@@ -3189,10 +3596,7 @@
                 if (countdown <= 0) {
                     countdown = gapToRefetch + 1; // reset countdown
 
-                    let accountSelected = getSavedAccounts();
-                    if (isBlank(accountSelected) == false) {
-                        accountSelected = JSON.parse(accountSelected);
-
+                    if (pages.length != 0) {
                         refreshCount = refreshCount + 1;
 
                         if (refreshCount % 30 == 0) // every 30 minutes, refetch all data
@@ -3211,7 +3615,7 @@
                             }
                         }
                         else {
-                            await refetchDataAll(accountSelected);
+                            await refetchDataAll(pages);
                         }
                     }
 

@@ -144,6 +144,8 @@ var pool = new Pool(postgres_credentials);
 
 app.options('/getHistoryMaxPV', cors(corsOptions));
 app.options('/getHistoryRatios', cors(corsOptions));
+app.options('/getHistoryRatiosByUsername', cors(corsOptions));
+app.options('/getHighestRevenueByUsernames', cors(corsOptions));
 app.options('/getServerTime', cors(corsOptions));
 app.options('/postTGSolar', cors(corsOptions));
 app.options('/getAllUsername', cors(corsOptions));
@@ -501,6 +503,71 @@ app.get('/getHistoryRatios', cors(corsOptions), async function (req, res) {
 });
 
 
+// same as /getHistoryRatios, but only compares the 2 given usernames
+// ratio = username1 / username2, per day, over the last 3 months
+app.post('/getHistoryRatiosByUsername', cors(corsOptions), async function (req, res) {
+    const username1 = req.body.formData?.username1;
+    const username2 = req.body.formData?.username2;
+
+    log("getHistoryRatiosByUsername: " + username1 + " | " + username2);
+
+    let mapData = new Map();
+
+    let arrayData = [];
+
+    // username1 first, so its revenue is the saved value (numerator)
+    let usernames = [username1, username2];
+
+    for (let i = 0; i < usernames.length; i++) {
+        let myusername = usernames[i];
+
+        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 order by vindex desc limit 3";
+        let result2 = await pool.query(query2, [myusername]);
+        let jsonRows2 = result2.rows;
+
+        for (let j = 0; j < jsonRows2.length; j++) {
+            let eachJSONData = JSON.parse(jsonRows2[j].json);
+
+            eachJSONData.forEach(function (obj) {
+                let netRevenue = obj.netRevenue;
+                let time = obj.time;
+
+                let netRevenueSaved = mapData.get(time);
+
+                if (netRevenueSaved == undefined) {
+                    if (netRevenue != 0) {
+                        mapData.set(time, netRevenue);
+                    }
+                }
+                else {
+                    if (netRevenue != 0) {
+                        // 1st acc must be higher revenue than the 2nd account due to higher kilowatt
+
+                        if (netRevenueSaved > netRevenue) {
+                            let ratioEach = netRevenueSaved / netRevenue;
+
+                            // max for min is > 1
+                            // max for max is <= 2.5
+                            if (ratioEach >= 1 && ratioEach < 2.5) {
+                                arrayData.push(ratioEach);
+                            }
+                        }
+                    }
+
+                }
+            });
+        }
+    }
+
+    // no matching days -> null (Math.min of empty array is Infinity)
+    let obj = new Object();
+    obj.min = arrayData.length > 0 ? Math.min(...arrayData) : null;
+    obj.max = arrayData.length > 0 ? Math.max(...arrayData) : null;
+
+    res.send(obj);
+});
+
+
 app.get('/getHistoryMaxPV', cors(corsOptions), async function (req, res) {
     const query = 'SELECT MIN(vindex) as min_vindex, username FROM public.datapreviousmonth GROUP BY username order by min_vindex asc';
     const result = await pool.query(query);
@@ -754,29 +821,49 @@ app.get(function (req, res) {
     res.sendFile(app.get('appPath') + '/index.html');
 });
 
-// get highest revenue from all months data
-app.get('/getHighestRevenue', cors(corsOptions), async function (req, res) {
-    const [previousMonth1, previousMonth2, currentMonth1, currentMonth2] = await Promise.all([
-        getHighestRevenueByUsername_previousmonth("tgrsolar@teckguan.com"),
-        getHighestRevenueByUsername_previousmonth("tgrsolar1@teckguan.com"),
-        getHighestRevenueByUsername_currentmonth("tgrsolar@teckguan.com"),
-        getHighestRevenueByUsername_currentmonth("tgrsolar1@teckguan.com")
+// highest day revenue of the given accounts: each account's own best day added together
+// (may be different dates), from the last 3 previous months or the current month, whichever is higher.
+// time = the 1st account's best day in that period
+async function getHighestRevenueByUsernames(usernames) {
+    const [previousMonths, currentMonths] = await Promise.all([
+        Promise.all(usernames.map(username => getHighestRevenueByUsername_previousmonth(username))),
+        Promise.all(usernames.map(username => getHighestRevenueByUsername_currentmonth(username)))
     ]);
 
-    let previousMonthTotal = previousMonth1.highest + previousMonth2.highest;
-    let currentMonthTotal = currentMonth1.highest + currentMonth2.highest;
+    let previousMonthTotal = previousMonths.reduce((sum, item) => sum + item.highest, 0);
+    let currentMonthTotal = currentMonths.reduce((sum, item) => sum + item.highest, 0);
 
     // round half up, then round to nearest integer
     // 366.855 -> 367
     let highest = parseFloat(Math.max(previousMonthTotal, currentMonthTotal));
     highest = Math.round(highest).toFixed(0);
 
-    let time = previousMonthTotal >= currentMonthTotal ? previousMonth1.time : currentMonth1.time;
+    let time = previousMonthTotal >= currentMonthTotal ? previousMonths[0].time : currentMonths[0].time;
     if (time) {
         const months = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
         const [dd, mmm, yyyy] = time.split('/');
         time = `${dd}/${months[mmm] || mmm}/${yyyy}`;
     }
+
+    return { highest, time };
+}
+
+// same as /getHighestRevenue, but for the given accounts (one index4 page)
+app.post('/getHighestRevenueByUsernames', cors(corsOptions), async function (req, res) {
+    const usernames = req.body.formData?.usernames;
+
+    if (Array.isArray(usernames) == false || usernames.length == 0) {
+        return res.send({ highest: "-", time: "" });
+    }
+
+    log("getHighestRevenueByUsernames: " + usernames.join(" | "));
+
+    res.send(await getHighestRevenueByUsernames(usernames));
+});
+
+// get highest revenue from all months data
+app.get('/getHighestRevenue', cors(corsOptions), async function (req, res) {
+    const { highest, time } = await getHighestRevenueByUsernames(["tgrsolar@teckguan.com", "tgrsolar1@teckguan.com"]);
 
     ///
     //let daily1 = await getHighestRevenueDailyByUsernameAndDate('tgrsolar@teckguan.com', '09042026');

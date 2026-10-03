@@ -1,3 +1,5 @@
 tgapps.synology.me*tgsolarmonitoring*postgres*password*8888
 
 localhost*tgsolarmonitoring*postgres*password*5432
+
+localhost*tgsolarmonitoring*postgres*password*5432
