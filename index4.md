@@ -101,7 +101,7 @@ body
 │               └── #accountRatio_p<i>   "Ratio: (Min) a (Live) b (Max) c", only on a page of
 │                                        exactly 2 accounts (between the two Max PVs)
 └── #pageDots                (absolute, under the countdown; only with 2+ pages)
-    └── .pageDot × pages     click to jump; .active = current page
+    └── .pageDot × pages     in the page's colour; click to jump; .active = current page (filled)
 ```
 
 `buildPages()` builds every page's skeleton up front: top, empty `.containerMain` and footer. `refetchData(username, pageIndex)` then adds the account's column to `#containerMain_<pageIndex>`. Look up the `_p<i>` elements with `getPageElement(baseId, pageIndex)`.
@@ -109,7 +109,7 @@ body
 ### Slots (one account on several pages)
 Each copy of an account is a **slot**, with `getSlotKey(username, pageIndex)` = `<username>_p<pageIndex>` (e.g. `tgrsolar@teckguan.com_p1`). Element ids (`<slot>` above), the chart maps and the `dataHM` keys all use the slot key, so the copies never clash. API calls, `usernamesHM`, the name shown in the panel, `data-username` (stale check, Max PV) and the border colour (`accountColorHM`) use the real username.
 
-Every page's top container uses the first colour from `brightColors`. `buildPages()` then gives each account the next colour, in page order (`accountColorHM`), so the page title can use the same colours. An account keeps its colour on every page. `.page` has `padding-top: 1.2vw` to leave room for the title tab above the border.
+Each page has its own colour (`getPageColor(pageIndex, firstPageColor)`), so pages can be told apart. Page 1 uses the first colour from `brightColors`, and pages 2+ take turns through `pageColors` (blue, pink, lavender, amber, teal, coral, silver), which are picked to stand apart from the account colours. The page colour is used for the top container's border, the page's `.pageDot` (via `--page-color`; the active dot is filled and scaled up) and a glow at the top of the `.page` (`--page-glow`, only when there are 2+ pages). The glow strength (alpha, `Off`–100%, default 50%) is the **Page glow** dropdown in Page Settings. It's applied straight away (`applyPageGlow()`) and saved in `localStorage.TGSolar_pageGlow`. `buildPages()` then gives each account the next colour from `brightColors`, in page order (`accountColorHM`), so the page title can use the same colours. An account keeps its colour on every page. `.page` has `padding-top: 1.2vw` to leave room for the title tab above the border.
 
 `makeGradientFromMainColor()` turns each colour from `getColorRemaining()` into the `--border-gradient` used by the animated border.
 
@@ -214,6 +214,7 @@ const gapToRefetch = minuteGap * 60; // seconds
 | Key | Content |
 |---|---|
 | `TGSolar_pages` | JSON array of pages `{ accounts: [usernames], seconds }`, e.g. `[{"accounts":["a@x","b@x"],"seconds":30},{"accounts":["a@x"],"seconds":10}]`. A username can appear on several pages. The first version saved plain arrays of usernames (`[["a@x","b@x"],["a@x"]]`); those still load with the default 20s and are rewritten in the new format. Owned by index4 |
+| `TGSolar_pageGlow` | Page glow strength, a number 0–1 (alpha of the page colour, `0` = off, default `0.5`). Set in Page Settings. Owned by index4 |
 | `TGSolar_selectedUsers` | JSON array of selected account objects (sorted by username on read). Shared with the other dashboards. index4 only reads it as the first-run fallback; `savePages()` keeps it in step with every account on any page (each account once) |
 | `TGSolar_selectedURL` | Last chosen dashboard path; **the page redirects there on load** |
 

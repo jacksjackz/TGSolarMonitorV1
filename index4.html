@@ -62,6 +62,8 @@
             box-sizing: border-box;
             padding: 1.2vw 10px 0 10px;
             /* top: room for the .pageTitle sitting on the top border */
+            /* faint glow of the page's colour at the top (--page-glow, set in buildPages) */
+            background: linear-gradient(to bottom, var(--page-glow, transparent), transparent 30%);
         }
 
         /* page title (usernames on the page), set into the top border of the totals bar like a tab */
@@ -125,17 +127,19 @@
             z-index: 10;
         }
 
+        /* each dot in its page's colour (--page-color, see getPageColor) */
         .pageDot {
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            border: 2px solid #00E5FF;
+            border: 2px solid var(--page-color, #00E5FF);
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, transform 0.3s ease;
         }
 
         .pageDot.active {
-            background-color: #00E5FF;
+            background-color: var(--page-color, #00E5FF);
+            transform: scale(1.4);
         }
 
         .pageSettings {
@@ -211,6 +215,13 @@
 
         .pageSettingsSecondsRow td {
             border-top: 4px solid #bbb;
+        }
+
+        .pageSettingsGlow {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            margin-top: 50px;
         }
 
         .pageSettingsButtons {
@@ -1956,9 +1967,33 @@
 
             content.appendChild(table);
 
+            // page glow strength: applied as soon as it's changed, and saved
+            const glowRow = document.createElement('div');
+            glowRow.className = 'pageSettingsGlow';
+            const glowLabel = document.createElement('span');
+            glowLabel.textContent = 'Page glow';
+            glowRow.appendChild(glowLabel);
+
+            const glowSelect = document.createElement('select');
+            let currentGlow = getPageGlow();
+            let glowOptions = pageGlowOptions.includes(currentGlow) ? pageGlowOptions : [...pageGlowOptions, currentGlow].sort((a, b) => a - b);
+            glowOptions.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value == 0 ? 'Off' : Math.round(value * 100) + '%';
+                glowSelect.appendChild(option);
+            });
+            glowSelect.value = currentGlow;
+            glowSelect.onchange = function () {
+                savePageGlow(parseFloat(glowSelect.value));
+                applyPageGlow();
+            };
+            glowRow.appendChild(glowSelect);
+            content.appendChild(glowRow);
+
             const note = document.createElement('div');
             note.className = 'pageSettingsNote';
-            note.textContent = 'Ticked accounts on the same page are shown side by side. An account can be on more than one page. ✕ removes a page; a page with nothing ticked is skipped too. "Show for" is how long the page stays up before sliding to the next.';
+            note.textContent = 'Ticked accounts on the same page are shown side by side. An account can be on more than one page. ✕ removes a page; a page with nothing ticked is skipped too. "Show for" is how long the page stays up before sliding to the next. "Page glow" is how strong each page\'s colour shows at the top (only with 2+ pages).';
             content.appendChild(note);
 
             const buttons = document.createElement('div');
@@ -2017,9 +2052,78 @@
             dialog.show();
         }
 
+        // Page 1 keeps the first colour from brightColors; the other pages take these in turn
+        // (picked to stand apart from the account colours, which come from brightColors).
+        const pageColors = [
+            "#2979FF", // blue
+            "#FF4081", // pink
+            "#B388FF", // lavender
+            "#FFC400", // amber
+            "#00BFA5", // teal
+            "#FF5252", // coral red
+            "#E0E0E0"  // silver
+        ];
+
+        function getPageColor(pageIndex, firstColor) {
+            if (pageIndex == 0)
+                return firstColor;
+            return pageColors[(pageIndex - 1) % pageColors.length];
+        }
+
+        // Page glow: alpha of the page colour at the top of each page, set in Page Settings,
+        // saved in localStorage.TGSolar_pageGlow (0 = off)
+        const defaultPageGlow = 0.50;
+        const pageGlowOptions = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 1];
+        let pageColorList = []; // per page: its colour (set in buildPages)
+
+        function getPageGlow() {
+            let value = NaN;
+            try {
+                value = parseFloat(localStorage.getItem('TGSolar_pageGlow'));
+            } catch (err) {
+                value = NaN;
+            }
+            if (isNaN(value) || value < 0 || value > 1)
+                return defaultPageGlow;
+            return value;
+        }
+
+        function savePageGlow(value) {
+            try {
+                localStorage.setItem('TGSolar_pageGlow', value);
+            } catch (err) {
+                // private mode etc, it just won't be remembered
+            }
+        }
+
+        // only with 2+ pages, a single page looks the same as before
+        function applyPageGlow() {
+            let glow = getPageGlow();
+            pageColorList.forEach((color, pageIndex) => {
+                let page = document.getElementById("page_" + pageIndex);
+                if (!page)
+                    return;
+                if (pages.length > 1 && glow > 0)
+                    page.style.setProperty('--page-glow', hexToRgba(color, glow));
+                else
+                    page.style.removeProperty('--page-glow');
+            });
+        }
+
+        // "#2979FF" -> "rgba(41,121,255,0.15)" (for the page glow)
+        function hexToRgba(hex, alpha) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3)
+                hex = hex.split('').map(x => x + x).join('');
+            let r = parseInt(hex.substring(0, 2), 16);
+            let g = parseInt(hex.substring(2, 4), 16);
+            let b = parseInt(hex.substring(4, 6), 16);
+            return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+        }
+
         // Builds one slide per page: top totals, the row the account columns go into, and the footer.
         function buildPages() {
-            let topColor = getColorRemaining(); // same colour for every page's top
+            let firstPageColor = getColorRemaining(); // page 1's colour (taken first, so the account colours stay as before)
 
             // give each account its colour now (page order, same as refetchData would),
             // so the page titles can show the names in the colours of their columns
@@ -2041,7 +2145,11 @@
                 page.className = "page";
                 page.id = "page_" + pageIndex;
 
-                page.appendChild(createTopContainer(pageIndex, topColor));
+                // each page has its own colour: top border, page dot and a faint glow, so you can tell pages apart
+                let pageColor = getPageColor(pageIndex, firstPageColor);
+                pageColorList[pageIndex] = pageColor;
+
+                page.appendChild(createTopContainer(pageIndex, pageColor));
 
                 const containerMain = document.createElement('div');
                 containerMain.className = "containerMain";
@@ -2056,6 +2164,8 @@
             slider.appendChild(track);
             document.body.appendChild(slider);
 
+            applyPageGlow();
+
             if (pages.length > 1) {
                 const dots = document.createElement('div');
                 dots.id = "pageDots";
@@ -2063,6 +2173,7 @@
                 pages.forEach((pageAccounts, pageIndex) => {
                     const dot = document.createElement('div');
                     dot.className = "pageDot";
+                    dot.style.setProperty('--page-color', pageColorList[pageIndex]);
                     dot.title = "Page " + (pageIndex + 1) + " (" + formatSeconds(getPageSeconds(pageIndex)) + "): " + pageAccounts.map(u => u.username.split("@")[0]).join(", ");
                     dot.onclick = function () {
                         manualGoToPage(pageIndex);
