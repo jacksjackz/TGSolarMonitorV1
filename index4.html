@@ -123,6 +123,46 @@
             font-family: 'Courier New';
             text-align: center;
             flex: 1;
+            position: relative;
+            /* the footer ignores the mouse, the ratio takes it back for its hint */
+            pointer-events: auto;
+            cursor: help;
+        }
+
+        /* mouse over hint of the ratio (see getPageRatioHint) */
+        .pageFooter .accountRatio .ratioHint {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 10px;
+            width: 34vw;
+            padding: 0.8vw 1vw;
+            background: rgba(10, 10, 10, 0.95);
+            border: 1px solid #555;
+            border-radius: 8px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+            color: #ddd;
+            font-family: Arial, sans-serif;
+            font-size: 0.85vw;
+            line-height: 1.5;
+            text-align: left;
+            z-index: 20;
+        }
+
+        .pageFooter .accountRatio:hover .ratioHint {
+            display: block;
+        }
+
+        .pageFooter .accountRatio .ratioHint .val-min,
+        .pageFooter .accountRatio .ratioHint .val-max {
+            font-size: 1em;
+        }
+
+        .ratioHintNote {
+            color: #999;
+            font-style: italic;
         }
 
         #pageDots {
@@ -1265,6 +1305,14 @@
             return parseFloat(value) || 0;
         }
 
+        // today's production of an account in kWh, from the portal's Today indicators (cached for this refresh)
+        async function getTodayProductionKWh(username) {
+            let todayData = await getCachedData("id_target_today|" + username, () => getSolarData("id_target_today", false, username));
+            let item = (todayData || []).find(i => i.data_type === 'production_map');
+            let value = parseFloat(item?.value) || 0;
+            return item?.unit === 'MWh' ? value * 1000 : value;
+        }
+
         // pages: array of pages, each an array of account objects ({ username, ... })
         async function refetchDataAll(pagesToFetch) {
             return new Promise(async (resolve, reject) => {
@@ -1301,15 +1349,19 @@
                         animateNumber(getPageElement("divTodayLastMonth_Today", pageIndex), Math.round(totalLastMonth));
                         animateNumber(getPageElement("divTotal_Yesterday", pageIndex), Math.round(totalYesterday));
 
-                        // Ratio of 1st account vs 2nd account (daily revenue), only for a page of 2 accounts
+                        // Ratio of 1st account vs 2nd account (today's kWh production), only for a page of 2 accounts.
+                        // kWh, not revenue: the history Min/Max is pv x the same rate for both accounts (= a kWh ratio),
+                        // while today's revenue is the portal's for account 1 but pv x 0.37 for account 2
                         if (accounts.length == 2) {
-                            let account1Today = getDataHMNumber("Today_" + getSlotKey(accounts[0].username, pageIndex));
-                            let account2Today = getDataHMNumber("Today_" + getSlotKey(accounts[1].username, pageIndex));
+                            let account1PV = await getTodayProductionKWh(accounts[0].username);
+                            let account2PV = await getTodayProductionKWh(accounts[1].username);
 
-                            let ratio = account2Today > 0 ? (account1Today / account2Today) : 0;
-                            log("Account ratio - " + accounts[0].username + ": " + account1Today + " | " + accounts[1].username + ": " + account2Today + " | Ratio: " + ratio.toFixed(2));
+                            let ratio = account2PV > 0 ? (account1PV / account2PV) : null;
+                            log("Account ratio - " + accounts[0].username + ": " + account1PV + " kWh | " + accounts[1].username + ": " + account2PV + " kWh | Ratio: " + (ratio != null ? ratio.toFixed(2) : "-"));
 
-                            pageRatios[pageIndex].live = ratio.toFixed(2);
+                            pageRatios[pageIndex].live = ratio != null ? ratio.toFixed(2) : "-";
+                            pageRatios[pageIndex].pv1 = account1PV;
+                            pageRatios[pageIndex].pv2 = account2PV;
                             renderPageRatio(pageIndex);
                         }
                     }
@@ -1797,7 +1849,7 @@
         let pages = [];                       // array of pages, each an array of account objects
         let pageSeconds = [];                 // per page: seconds it stays up before sliding on
         let accountColorHM = new Map();       // username -> border colour, same on every page
-        let pageRatios = [];                  // per page { min, max, live } (pages with 2 accounts)
+        let pageRatios = [];                  // per page { min, max, live, pv1, pv2 } (pages with 2 accounts)
         let currentPage = 0;
         let nextSlideAt = 0;
         let slideTimerId = null;
@@ -2290,7 +2342,46 @@
     <span class="val-min">(Min) ${ratio.min}</span>
     <span class="val-curr">(Live) ${ratio.live}</span>
     <span class="val-max">(Max) ${ratio.max}</span>
+    <div class="ratioHint">${getPageRatioHint(pageIndex)}</div>
 `;
+        }
+
+        // mouse over hint of the ratio: what it is, today's numbers, and which panels may need washing
+        function getPageRatioHint(pageIndex) {
+            let ratio = pageRatios[pageIndex];
+            let name1 = pages[pageIndex][0].username.split("@")[0];
+            let name2 = pages[pageIndex][1].username.split("@")[0];
+
+            let live = parseFloat(ratio.live);
+            let min = parseFloat(ratio.min);
+            let max = parseFloat(ratio.max);
+
+            let status = "Waiting for data";
+            if (isNaN(live) == false && isNaN(min) == false && isNaN(max) == false) {
+                if (live < min)
+                    status = `<span class="val-min">Below Min</span>: <b>${name1}</b> is producing less than usual, its panels may need washing`;
+                else if (live > max)
+                    status = `<span class="val-max">Above Max</span>: <b>${name2}</b> is producing less than usual, its panels may need washing`;
+                else
+                    status = `<span class="val-curr">Within range</span>: both are producing normally`;
+            }
+
+            let pvText = ratio.pv1 != null
+                ? `${ratio.pv1.toFixed(1)} kWh ÷ ${ratio.pv2.toFixed(1)} kWh`
+                : "-";
+
+            return `
+        <b>Production ratio: ${name1} ÷ ${name2}</b><br>
+        <span class="val-curr">Live</span>: today's kWh so far = ${pvText}<br>
+        <span class="val-min">Min</span> / <span class="val-max">Max</span>: lowest / highest daily ratio over the last 3 completed months<br>
+        <br>
+        Live outside Min - Max means one site's panels may be dirty:<br>
+        &bull; below Min: wash <b>${name1}</b><br>
+        &bull; above Max: wash <b>${name2}</b><br>
+        <br>
+        Now: ${status}<br>
+        <span class="ratioHintNote">Best read in the late afternoon, morning values swing a lot. Rule out an inverter fault or a stale scrape first.</span>
+    `;
         }
 
         // record day revenue of the accounts on this page

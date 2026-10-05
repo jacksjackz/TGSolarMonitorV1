@@ -43,7 +43,7 @@ let url = "https://tgapps.synology.me:40556";   // default if both false
 | `getTGSolarDataSingle(apiName, chartType, user)` | `GET /getTGSolar/:type/:user` | Indicator data or chart detail (see below) |
 | `getDailyData(start, end, user)` | `GET /getDailyDateStart/:date/:user` (or `/getDailyDate/:from/:to/:user`) | Today's 5-minute readings (`json` column per row) |
 | `getLastUpdateTime(user)` | `GET /getLastUpdateTime/:user` | `datetime_utc8` of last scrape; used for the staleness check |
-| `getHistoryRatios(user1, user2)` | `POST /getHistoryRatiosByUsername` (body `{ formData: { username1, username2 } }`) (falls back to `GET /getHistoryRatios` when a username is blank) | `{ min, max }` user1/user2 daily revenue ratio over last 3 months (`null` if no matching days). Called once per page that has exactly 2 accounts, with that page's pair |
+| `getHistoryRatios(user1, user2)` | `POST /getHistoryRatiosByUsername` (body `{ formData: { username1, username2 } }`) (falls back to `GET /getHistoryRatios` when a username is blank) | `{ min, max }` user1/user2 daily revenue ratio over last 3 months (both saved as pv × the same rate, so in effect a kWh ratio) (`null` if no matching days). Called once per page that has exactly 2 accounts, with that page's pair |
 | `getHistoryMaxPVData()` | `GET /getHistoryMaxPV` | `[{ username, max }]` peak PV per account (last 3 months). Matched to `#maxPV_<username>` by username |
 | `loadHighestRevenue(pageIndex)` | `POST /getHighestRevenueByUsernames` (body `{ formData: { usernames: [...] } }`) | `{ highest, time }`: record day revenue + date for the accounts on that page. Called once per page from `startRefetchInterval()` |
 
@@ -101,7 +101,9 @@ body
 │           └── #bottomFooterContainer_p<i>  (.pageFooter)
 │               ├── #maxPV_<slot>.maxPV[data-username]   "Max PV: x kW", one per account on the page
 │               └── #accountRatio_p<i>   "Ratio: (Min) a (Live) b (Max) c", only on a page of
-│                                        exactly 2 accounts (between the two Max PVs)
+│                   │                    exactly 2 accounts (between the two Max PVs)
+│                   └── .ratioHint       mouse over hint (the footer has pointer-events: none,
+│                                        .accountRatio turns it back on)
 └── #pageDots                (absolute, under the countdown; only with 2+ pages)
     └── .pageDot × pages     in the page's colour; click to jump; .active = current page (filled)
 ```
@@ -137,7 +139,9 @@ Elements are created once and then updated in place on later refreshes (`isNew` 
 ### `refetchDataAll(pages)`
 It first clears `refreshFetchCache`. Then for each page, and each account on it in order: call `refetchData(user, pageIndex)`, and add up `Today_<slot>`, `ThisMonth_<slot>` (+ `ThisMonth_OtherAcc_ExtraInfo_<slot>`), `Last Month_<slot>` and `Yesterday_<slot>` from `dataHM`. It then writes **that page's** totals into `#container_top_p<i>`. Every account is refreshed every cycle, whichever page is showing. All 6 requests in `refetchData` go through `getCachedData()`, so an account on several pages is still fetched **once** per refresh. Each slot gets its own `structuredClone` of the response.
 
-If the page has exactly 2 accounts, the **live ratio** is `Today[acct0] / Today[acct1]` (username order). It is stored in `pageRatios[i].live` and drawn by `renderPageRatio(i)`.
+If the page has exactly 2 accounts, the **live ratio** is today's **kWh production** of acct0 ÷ acct1 (username order), read from the portal's `production_map` by `getTodayProductionKWh()` (MWh is converted to kWh). It uses kWh rather than revenue so it matches Min/Max: the history saves `netRevenue = pv × the same rate` for both accounts, so Min/Max is really a kWh ratio, while today's revenue is the portal's figure for acct0 but `pv × 0.37` for acct1. Live is `-` while acct1 has no production yet. The value and both kWh are stored in `pageRatios[i]` (`live`, `pv1`, `pv2`) and drawn by `renderPageRatio(i)`.
+
+**Purpose: panel washing check.** Both sites get the same weather, so their production ratio should stay inside the historical Min-Max. Live **below Min** means acct0 is under-producing (wash its panels). **Above Max** means acct1 is (wash its panels). Hovering the ratio shows a hint (`.ratioHint`, built by `getPageRatioHint(i)`) with the explanation, today's kWh and the current verdict. Read it in the late afternoon, since morning values swing a lot, and rule out an inverter fault or a stale scrape first.
 
 In `finally` it checks each account's last scrape time, once per account. This marks every copy of the account. **More than 15 minutes old** → that account's `.net-revenue-today` panel turns red (`#db0000`). If the scrape is recent, or the time can't be fetched, the panel goes back to transparent. The colour is set once per refresh (it isn't cleared first), and the change fades over 0.8s.
 
