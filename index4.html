@@ -89,6 +89,13 @@
             font-weight: normal;
         }
 
+        .pageTitleLocation {
+            color: #ccc;
+            font-weight: normal;
+            letter-spacing: 1px;
+            margin-left: 1.5vw;
+        }
+
         .pageFooter {
             display: flex;
             flex-direction: row;
@@ -180,6 +187,12 @@
             text-align: left;
             padding-left: 0;
             padding-right: 80px;
+        }
+
+        .pageSettingsLocation {
+            font-size: 44px;
+            color: #777;
+            margin-top: 6px;
         }
 
         .pageSettings input[type="checkbox"] {
@@ -1870,6 +1883,23 @@
             return document.getElementById(baseId + "_p" + pageIndex);
         }
 
+        // account's location (accounts.location, loaded into usernamesHM), "" if not set
+        function getAccountLocation(username) {
+            let info = usernamesHM.get(username);
+            return info && info.location ? String(info.location).trim() : "";
+        }
+
+        // locations of the accounts on a page, each shown once (same location -> only one), blanks skipped
+        function getPageLocations(pageAccounts) {
+            let locations = new Map(); // lowercase -> as written
+            pageAccounts.forEach(user => {
+                let location = getAccountLocation(user.username);
+                if (location != "" && !locations.has(location.toLowerCase()))
+                    locations.set(location.toLowerCase(), location);
+            });
+            return [...locations.values()];
+        }
+
         // Page settings: a grid of checkboxes, one row per account, one column per page.
         // An account can be ticked on several pages. Each column has a ✕ to remove the page and a
         // "Show for" dropdown (how long the page stays up). Reloads when something changed.
@@ -1892,6 +1922,13 @@
                 const name = document.createElement('td');
                 name.className = 'pageSettingsName';
                 name.textContent = user.username;
+                let location = getAccountLocation(user.username);
+                if (location != "") {
+                    const locationLine = document.createElement('div');
+                    locationLine.className = 'pageSettingsLocation';
+                    locationLine.textContent = '📍 ' + location;
+                    name.appendChild(locationLine);
+                }
                 row.appendChild(name);
                 table.appendChild(row);
                 rows.set(user.username, row);
@@ -3518,6 +3555,14 @@
                 name.style.color = accountColorHM.get(user.username) || "white";
                 pageTitle.appendChild(name);
             });
+            // then the location(s), each only once
+            let locations = getPageLocations(pages[pageIndex]);
+            if (locations.length != 0) {
+                const location = document.createElement('span');
+                location.className = "pageTitleLocation";
+                location.textContent = "📍 " + locations.join(" / ");
+                pageTitle.appendChild(location);
+            }
             container.appendChild(pageTitle);
 
             ///

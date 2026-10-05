@@ -76,7 +76,9 @@ body
 │       └── .page#page_<i>   one per page, 100% wide, clips its own overflow
 │           ├── #container_top_p<i>  (.divAccountContainerTop)   ← totals of THIS page's accounts
 │           │   ├── #pageTitle_p<i>  (.pageTitle)  usernames on the page ("tgrsolar + tgrsolar1"), set into the
-│           │   │                    top border like a tab; each name in its account's border colour
+│           │   │                    top border like a tab; each name in its account's border colour,
+│           │   │                    then .pageTitleLocation "📍 <location>" (accounts.location, each
+│           │   │                    distinct location once via getPageLocations(), hidden if none set)
 │           │   ├── Last Month    #divTodayLastMonth_Today_p<i>
 │           │   ├── This Month    #divTodayThisMonth_Today_p<i>
 │           │   └── Today  [sun → /index]
@@ -205,7 +207,7 @@ const gapToRefetch = minuteGap * 60; // seconds
 | Click target | Action |
 |---|---|
 | Sun icon in **top** container | Go to `/index` and save it as `TGSolar_selectedURL` |
-| Sun icon (`.logoSun`) in any account's Today panel | Open **Page Settings** (`openPageSettingsDialog`, a `SimpleDialog`, large fonts for the TV). It is a grid of checkboxes with one row per server account and one column per page: the current pages plus one empty column, and **+ Add Page** adds more. An account can be ticked on several pages, and an account ticked nowhere is hidden. Each column header has a **✕** that removes the page; the columns after it renumber. A bottom **Show for** row has a dropdown per page (5s – 5 min) for how long that page stays up. It closes with **Done** or a click outside. On close, pages are built from the columns in order. Empty columns are skipped too, so "Page 1 + Page 3" becomes 2 pages. If every account is hidden, it defaults to the first account. **If nothing changed, it just closes.** Otherwise it calls `savePages()`, stops the refresh and slide timers, shows the spinner and runs `safeReload()` |
+| Sun icon (`.logoSun`) in any account's Today panel | Open **Page Settings** (`openPageSettingsDialog`, a `SimpleDialog`, large fonts for the TV). It is a grid of checkboxes with one row per server account (username, with its `📍 location` underneath when set) and one column per page: the current pages plus one empty column, and **+ Add Page** adds more. An account can be ticked on several pages, and an account ticked nowhere is hidden. Each column header has a **✕** that removes the page; the columns after it renumber. A bottom **Show for** row has a dropdown per page (5s – 5 min) for how long that page stays up. It closes with **Done** or a click outside. On close, pages are built from the columns in order. Empty columns are skipped too, so "Page 1 + Page 3" becomes 2 pages. If every account is hidden, it defaults to the first account. **If nothing changed, it just closes.** Otherwise it calls `savePages()`, stops the refresh and slide timers, shows the spinner and runs `safeReload()` |
 | Page dot (`.pageDot`) | Jump to that page |
 | ← / → keys | Previous / next page (wraps around; ignored while a dialog is open) |
 | Swipe left / right (touch) | Next / previous page |
