@@ -44,7 +44,7 @@ let url = "https://tgapps.synology.me:40556";   // default if both false
 | `getDailyData(start, end, user)` | `GET /getDailyDateStart/:date/:user` (or `/getDailyDate/:from/:to/:user`) | Today's 5-minute readings (`json` column per row) |
 | `getLastUpdateTime(user)` | `GET /getLastUpdateTime/:user` | `datetime_utc8` of last scrape; used for the staleness check |
 | `getHistoryRatios(user1, user2)` | `POST /getHistoryRatiosByUsername` (body `{ formData: { username1, username2 } }`) (falls back to `GET /getHistoryRatios` when a username is blank) | `{ min, max }` user1/user2 daily revenue ratio over last 3 months (both saved as pv × the same rate, so in effect a kWh ratio). Days where either account is blank, 0, or under 60% of its own median (`HISTORY_RATIO_MIN_OF_MEDIAN`, a partial day from a portal data gap or an outage) are skipped, as are ratios outside 1-2.5. Also returns `days` (how many days were used) (`null` if no matching days). Called once per page that has exactly 2 accounts, with that page's pair |
-| `getHistoryMaxPVData()` | `GET /getHistoryMaxPV` | `[{ username, max }]` peak PV per account (last 3 months). Matched to `#maxPV_<username>` by username |
+| `getHistoryMaxPVData()` | `GET /getHistoryMaxPV` | `[{ username, max, time }]` best day's production (kWh) per account over the last 3 months, and that day's date (`time`, eg `14/Sep/2026`). Matched to `#maxPV_<username>` by username |
 | `loadHighestRevenue(pageIndex)` | `POST /getHighestRevenueByUsernames` (body `{ formData: { usernames: [...] } }`) | `{ highest, time }`: record day revenue + date for the accounts on that page. Called once per page from `startRefetchInterval()` |
 
 `GET /getHighestRevenue` (hard-coded to `tgrsolar` + `tgrsolar1`) still exists, but index4 no longer uses it. Both endpoints share `getHighestRevenueByUsernames()` in `app.js`.
@@ -101,10 +101,13 @@ body
 │           └── #bottomFooterContainer_p<i>  (.pageFooter)
 │               ├── #maxPV_<slot>.maxPV[data-username]   one per account on the page (1st account bottom left,
 │               │   │                    2nd bottom right, mirrored so Max PV stays at the edge)
-│               │   ├── .maxPVValue      "Max PV: x kW" (getHistoryMaxPVData)
+│               │   ├── .maxPVValue      "Max PV: x kWh" (getHistoryMaxPVData): the best day's production
+│               │   │                    over the last 3 months (daily `pv`), not peak power
+│               │   ├── .maxPVHint       mouse over hint: that best day's kWh and date (`time` from
+│               │   │                    /getHistoryMaxPV); left corner opens right, right corner opens left
 │               │   └── #todayPV_<slot>.todayPV   tiny "Today x kWh", the portal's production so far,
 │               │                        updated every refresh in refetchDataAll (getTodayProductionKWh)
-│               └── #accountRatio_p<i>   "Ratio: (Min) a (Live) b (Max) c", only on a page of
+│               └── #accountRatio_p<i>   "(Min) a (Live) b (Max) c", only on a page of
 │                   │                    exactly 2 accounts (between the two Max PVs)
 │                   └── .ratioHint       mouse over hint (the footer has pointer-events: none,
 │                                        .accountRatio turns it back on)

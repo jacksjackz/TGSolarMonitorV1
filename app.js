@@ -601,7 +601,8 @@ app.get('/getHistoryMaxPV', cors(corsOptions), async function (req, res) {
 
 
     for (let i = 0; i < jsonRows.length; i++) {
-        let arrayData = [];
+        let max = -Infinity;
+        let maxTime = null; // date of the best day, eg "14/Sep/2026"
 
         let myusername = jsonRows[i].username;
 
@@ -616,16 +617,19 @@ app.get('/getHistoryMaxPV', cors(corsOptions), async function (req, res) {
             let eachJSONData = JSON.parse(jsonRows2[j].json);
 
             eachJSONData.forEach(function (obj) {
-                let pv = obj.pv;
-                arrayData.push(pv);
+                // the day's production in kWh, as text from the portal: 1,000+ has a thousands comma
+                let pv = parseFloat(String(obj.pv).replace(/,/g, '')) || 0;
+                if (pv > max) {
+                    max = pv;
+                    maxTime = obj.time;
+                }
             });
         }
-
-        const max = Math.max(...arrayData);
 
         let obj = new Object();
         obj.username = myusername;
         obj.max = max;
+        obj.time = maxTime;
 
         arrayDataMain.push(obj);
 
