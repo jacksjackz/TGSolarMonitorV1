@@ -43,7 +43,7 @@ let url = "https://tgapps.synology.me:40556";   // default if both false
 | `getTGSolarDataSingle(apiName, chartType, user)` | `GET /getTGSolar/:type/:user` | Indicator data or chart detail (see below) |
 | `getDailyData(start, end, user)` | `GET /getDailyDateStart/:date/:user` (or `/getDailyDate/:from/:to/:user`) | Today's 5-minute readings (`json` column per row) |
 | `getLastUpdateTime(user)` | `GET /getLastUpdateTime/:user` | `datetime_utc8` of last scrape; used for the staleness check |
-| `getHistoryRatios(user1, user2)` | `POST /getHistoryRatiosByUsername` (body `{ formData: { username1, username2 } }`) (falls back to `GET /getHistoryRatios` when a username is blank) | `{ min, max }` user1/user2 daily revenue ratio over last 3 months (both saved as pv × the same rate, so in effect a kWh ratio) (`null` if no matching days). Called once per page that has exactly 2 accounts, with that page's pair |
+| `getHistoryRatios(user1, user2)` | `POST /getHistoryRatiosByUsername` (body `{ formData: { username1, username2 } }`) (falls back to `GET /getHistoryRatios` when a username is blank) | `{ min, max }` user1/user2 daily revenue ratio over last 3 months (both saved as pv × the same rate, so in effect a kWh ratio). Days where either account is blank, 0, or under 60% of its own median (`HISTORY_RATIO_MIN_OF_MEDIAN`, a partial day from a portal data gap or an outage) are skipped, as are ratios outside 1-2.5. Also returns `days` (how many days were used) (`null` if no matching days). Called once per page that has exactly 2 accounts, with that page's pair |
 | `getHistoryMaxPVData()` | `GET /getHistoryMaxPV` | `[{ username, max }]` peak PV per account (last 3 months). Matched to `#maxPV_<username>` by username |
 | `loadHighestRevenue(pageIndex)` | `POST /getHighestRevenueByUsernames` (body `{ formData: { usernames: [...] } }`) | `{ highest, time }`: record day revenue + date for the accounts on that page. Called once per page from `startRefetchInterval()` |
 
@@ -99,7 +99,11 @@ body
 │           │       ├── #section_Yesterday_<slot>   → "This Month" + canvas#thisMonthDetailChart_<slot>
 │           │       └── #section_LastMonth_<slot>   → "Last Month" + canvas#lastMonthDetailChart_<slot>
 │           └── #bottomFooterContainer_p<i>  (.pageFooter)
-│               ├── #maxPV_<slot>.maxPV[data-username]   "Max PV: x kW", one per account on the page
+│               ├── #maxPV_<slot>.maxPV[data-username]   one per account on the page (1st account bottom left,
+│               │   │                    2nd bottom right, mirrored so Max PV stays at the edge)
+│               │   ├── .maxPVValue      "Max PV: x kW" (getHistoryMaxPVData)
+│               │   └── #todayPV_<slot>.todayPV   tiny "Today x kWh", the portal's production so far,
+│               │                        updated every refresh in refetchDataAll (getTodayProductionKWh)
 │               └── #accountRatio_p<i>   "Ratio: (Min) a (Live) b (Max) c", only on a page of
 │                   │                    exactly 2 accounts (between the two Max PVs)
 │                   └── .ratioHint       mouse over hint (the footer has pointer-events: none,

@@ -113,8 +113,25 @@
             font-family: 'Courier New';
         }
 
+        /* sized to its content (Max PV + today's production on one line) instead of 20% */
+        .pageFooter .maxPV {
+            display: flex;
+            align-items: baseline;
+            gap: 0.6vw;
+            width: auto;
+            min-width: 20%;
+            white-space: nowrap;
+        }
+
+        /* right corner: mirrored, so Max PV stays at the edge and today's production sits inside */
         .pageFooter .maxPV:last-child:not(:first-child) {
-            text-align: right;
+            flex-direction: row-reverse;
+        }
+
+        .pageFooter .maxPV .todayPV {
+            color: #cccccc;
+            font-size: 0.6em;
+            white-space: nowrap;
         }
 
         .pageFooter .accountRatio {
@@ -1333,6 +1350,11 @@
 
                             let slotKey = getSlotKey(obj.username, pageIndex);
 
+                            // tiny today's production beside the account's Max PV (footer)
+                            let todayPVElement = document.getElementById("todayPV_" + slotKey);
+                            if (todayPVElement)
+                                todayPVElement.innerHTML = "Today " + (await getTodayProductionKWh(obj.username)).toFixed(1) + " kWh";
+
                             totalToday = totalToday + getDataHMNumber("Today_" + slotKey);
 
                             // ExtraInfo = today's part, kept apart for accounts with the manual fix (see loadDailyDayDetailChart)
@@ -2321,10 +2343,12 @@
                     footer.appendChild(ratioElement);
                 }
 
+                // Max PV (getHistoryMaxPVData) + a tiny today's production beside it (refetchDataAll)
                 const maxPV = document.createElement('div');
                 maxPV.className = "maxPV";
                 maxPV.id = "maxPV_" + getSlotKey(user.username, pageIndex);
                 maxPV.dataset.username = user.username;
+                maxPV.innerHTML = `<span class="maxPVValue"></span><span class="todayPV" id="todayPV_${getSlotKey(user.username, pageIndex)}"></span>`;
                 footer.appendChild(maxPV);
             });
 
@@ -3840,7 +3864,7 @@
                         if (row.max != null && isFinite(row.max)) {
                             // every page the account is on
                             document.querySelectorAll(`.maxPV[data-username="${row.username}"]`).forEach(maxPV => {
-                                maxPV.innerHTML = `Max PV: ${Number(row.max).toFixed(1)} kW`;
+                                maxPV.querySelector('.maxPVValue').innerHTML = `Max PV: ${Number(row.max).toFixed(1)} kW`;
                             });
                         }
                     });

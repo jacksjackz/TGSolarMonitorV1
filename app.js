@@ -204,10 +204,13 @@ app.get('/getAllUsername', cors(corsOptions), async function (req, res) {
 });
 
 
+// the 3 latest months by date (monthyear is "MMYYYY": year first, then month), not the 3 last inserted rows,
+// so a month backfilled later (or an old month inserted) can't push a newer month out
+const ORDER_BY_LATEST_3_MONTHS = "ORDER BY RIGHT(monthyear, 4) DESC, LEFT(monthyear, 2) DESC LIMIT 3";
 
 function getHighestRevenueByUsername_previousmonth(username) {
     return new Promise(async (resolve, reject) => {
-        const query = 'SELECT json FROM datapreviousmonth WHERE username = $1 order by vindex desc limit 3';
+        const query = 'SELECT json FROM datapreviousmonth WHERE username = $1 ' + ORDER_BY_LATEST_3_MONTHS;
         const result = await pool.query(query, [username]);
         const jsonRows = result.rows;
         let highestRevenue = 0;
@@ -441,7 +444,7 @@ app.get('/getHistoryRatios', cors(corsOptions), async function (req, res) {
         //log(myusername);
 
         /////////////////
-        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 order by vindex desc limit 3";
+        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 " + ORDER_BY_LATEST_3_MONTHS;
 
         //let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1";
         let result2 = await pool.query(query2, [myusername]);
@@ -503,66 +506,86 @@ app.get('/getHistoryRatios', cors(corsOptions), async function (req, res) {
 });
 
 
+// a day below this share of the account's median is skipped: a partial day (portal data gap or outage),
+// eg 12/Sep/2026 tgrsolar 408.8 kWh vs a usual ~500-600, which would pull the Min down
+const HISTORY_RATIO_MIN_OF_MEDIAN = 0.6;
+
+function getMedian(values) {
+    if (values.length == 0)
+        return 0;
+
+    let sorted = [...values].sort((a, b) => a - b);
+    let middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 == 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+// rows1 / rows2: the json days of each account ([{ time, netRevenue, ... }])
+// returns { min, max } of the daily ratio account1 / account2 (null if no day is usable)
+function calcHistoryRatios(rows1, rows2) {
+    // time -> netRevenue, a blank / 0 day is left out
+    let toMap = rows => {
+        let map = new Map();
+        rows.forEach(obj => {
+            let netRevenue = parseFloat(obj.netRevenue) || 0;
+            if (netRevenue > 0)
+                map.set(obj.time, netRevenue);
+        });
+        return map;
+    };
+
+    let map1 = toMap(rows1);
+    let map2 = toMap(rows2);
+
+    let minUsable1 = getMedian([...map1.values()]) * HISTORY_RATIO_MIN_OF_MEDIAN;
+    let minUsable2 = getMedian([...map2.values()]) * HISTORY_RATIO_MIN_OF_MEDIAN;
+
+    let arrayData = [];
+
+    map1.forEach((netRevenue1, time) => {
+        let netRevenue2 = map2.get(time);
+
+        // both accounts must have a full day
+        if (netRevenue2 == undefined || netRevenue1 < minUsable1 || netRevenue2 < minUsable2)
+            return;
+
+        // 1st acc must be higher revenue than the 2nd account due to higher kilowatt
+        let ratioEach = netRevenue1 / netRevenue2;
+
+        // max for min is > 1
+        // max for max is <= 2.5
+        if (ratioEach >= 1 && ratioEach < 2.5) {
+            arrayData.push(ratioEach);
+        }
+    });
+
+    // no matching days -> null (Math.min of empty array is Infinity)
+    return {
+        min: arrayData.length > 0 ? Math.min(...arrayData) : null,
+        max: arrayData.length > 0 ? Math.max(...arrayData) : null,
+        days: arrayData.length
+    };
+}
+
 // same as /getHistoryRatios, but only compares the 2 given usernames
 // ratio = username1 / username2, per day, over the last 3 months
+// (days where either account is blank or well under its usual production are skipped, see calcHistoryRatios)
 app.post('/getHistoryRatiosByUsername', cors(corsOptions), async function (req, res) {
     const username1 = req.body.formData?.username1;
     const username2 = req.body.formData?.username2;
 
     log("getHistoryRatiosByUsername: " + username1 + " | " + username2);
 
-    let mapData = new Map();
-
-    let arrayData = [];
-
-    // username1 first, so its revenue is the saved value (numerator)
-    let usernames = [username1, username2];
-
-    for (let i = 0; i < usernames.length; i++) {
-        let myusername = usernames[i];
-
-        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 order by vindex desc limit 3";
+    let getRows = async myusername => {
+        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 " + ORDER_BY_LATEST_3_MONTHS;
         let result2 = await pool.query(query2, [myusername]);
-        let jsonRows2 = result2.rows;
 
-        for (let j = 0; j < jsonRows2.length; j++) {
-            let eachJSONData = JSON.parse(jsonRows2[j].json);
+        let rows = [];
+        result2.rows.forEach(row => rows.push(...JSON.parse(row.json)));
+        return rows;
+    };
 
-            eachJSONData.forEach(function (obj) {
-                let netRevenue = obj.netRevenue;
-                let time = obj.time;
-
-                let netRevenueSaved = mapData.get(time);
-
-                if (netRevenueSaved == undefined) {
-                    if (netRevenue != 0) {
-                        mapData.set(time, netRevenue);
-                    }
-                }
-                else {
-                    if (netRevenue != 0) {
-                        // 1st acc must be higher revenue than the 2nd account due to higher kilowatt
-
-                        if (netRevenueSaved > netRevenue) {
-                            let ratioEach = netRevenueSaved / netRevenue;
-
-                            // max for min is > 1
-                            // max for max is <= 2.5
-                            if (ratioEach >= 1 && ratioEach < 2.5) {
-                                arrayData.push(ratioEach);
-                            }
-                        }
-                    }
-
-                }
-            });
-        }
-    }
-
-    // no matching days -> null (Math.min of empty array is Infinity)
-    let obj = new Object();
-    obj.min = arrayData.length > 0 ? Math.min(...arrayData) : null;
-    obj.max = arrayData.length > 0 ? Math.max(...arrayData) : null;
+    let obj = calcHistoryRatios(await getRows(username1), await getRows(username2));
+    log("getHistoryRatiosByUsername: " + obj.days + " days | min " + obj.min + " | max " + obj.max);
 
     res.send(obj);
 });
@@ -583,7 +606,7 @@ app.get('/getHistoryMaxPV', cors(corsOptions), async function (req, res) {
         let myusername = jsonRows[i].username;
 
         /////////////////
-        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 order by vindex desc limit 3";
+        let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1 " + ORDER_BY_LATEST_3_MONTHS;
 
         //let query2 = "SELECT * FROM datapreviousmonth WHERE username = $1";
         let result2 = await pool.query(query2, [myusername]);

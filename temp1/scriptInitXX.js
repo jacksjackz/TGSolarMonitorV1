@@ -1,6 +1,6 @@
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-//    const myusername = "tgrsolar@teckguan.com";
+//    const myusername = "tgrsolar1@teckguan.com";
 
 
 
@@ -9,6 +9,39 @@
             return false;
         return true;
     }
+
+//    function calculateCumulativeRM_Daily(data, ratePerKWh = 0.37, intervalMinutes = 5) {
+//        let cumulativeRM = 0;
+//        const results = [];
+//
+//        data.forEach((entry, index) => {
+//
+//            const pvW = entry.pv ?? 0;
+//            const grid = entry.grid ?? 0;
+//            const load = entry.load ?? 0;
+//
+//            const energyKWh = (pvW / 1000) * (intervalMinutes / 60); // Convert to kWh
+//            const savingsRM = energyKWh * ratePerKWh;
+//
+//            // Round to nearest sen (0.01)
+//            const roundedRM = Math.floor(savingsRM * 100) / 100;
+//
+//            // Only add real RM value (0.01 and above)
+//            cumulativeRM += roundedRM;
+//
+//            results.push({
+//                time: entry.time,
+//                pv: entry.pv || 0,
+//                grid: entry.grid || 0,
+//                load: entry.load || 0,
+//                energyKWh: energyKWh || 0,
+//                savingsRM: roundedRM || 0,
+//                cumulativeRM: cumulativeRM || 0
+//            });
+//        });
+//
+//        return results;
+//    }
 
 function getWattType()
 {
@@ -38,10 +71,8 @@ function getWattType()
     return wattTypeTemp;
 }
 
-// 0.376 (for factory / workshop) // 0.4460 (increased price)
-const ratePerKWh_Global = 0.4460
-
-function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, intervalMinutes = 5) {
+// 0.376 (for factory / workshop)
+function calculateCumulativeRM_Daily(data, ratePerKWh = 0.37, intervalMinutes = 5) {
     let cumulativeRM = 0;
     const results = [];
 
@@ -67,7 +98,7 @@ function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, inter
         const savingsRM = energyKWh * ratePerKWh;
 
         // Round to nearest sen (0.01)
-        const roundedRM = Math.round(savingsRM * 100) / 100;
+        const roundedRM = Math.floor(savingsRM * 100) / 100;
 
         // Only add real RM value (0.01 and above)
         cumulativeRM += roundedRM;
@@ -419,7 +450,7 @@ function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, inter
                            purchased_energy: cells[2] ? cells[2].textContent.trim() : 0,
                            feed_in: cells[3] ? cells[3].textContent.trim() : 0,
                            load: cells[4] ? cells[4].textContent.trim() : 0,
-                           netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * ratePerKWh_Global) : 0,
+                           netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * 0.37) : 0,
                        });
                    }
 
@@ -478,7 +509,7 @@ function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, inter
                      purchased_energy: cells[2] ? cells[2].textContent.trim() : 0,
                      feed_in: cells[3] ? cells[3].textContent.trim() : 0,
                      load: cells[4] ? cells[4].textContent.trim() : 0,
-                     netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * ratePerKWh_Global) : 0,
+                     netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * 0.37) : 0,
                  });
              }
 
@@ -543,7 +574,7 @@ function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, inter
                             purchased_energy: cells[2] ? cells[2].textContent.trim() : 0,
                             feed_in: cells[3] ? cells[3].textContent.trim() : 0,
                             load: cells[4] ? cells[4].textContent.trim() : 0,
-                            netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * ratePerKWh_Global) : 0,
+                            netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * 0.37) : 0,
                         });
                     }
 
@@ -585,7 +616,7 @@ function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, inter
                         purchased_energy: cells[2] ? cells[2].textContent.trim() : 0,
                         feed_in: cells[3] ? cells[3].textContent.trim() : 0,
                         load: cells[4] ? cells[4].textContent.trim() : 0,
-                        netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * ratePerKWh_Global) : 0,
+                        netRevenue: cells[1] ? (parseFloat(cells[1].textContent.trim().replace(/,/g, '')) * 0.37) : 0,
                     });
                 }
 
@@ -855,8 +886,12 @@ function calculateCumulativeRM_Daily(data, ratePerKWh = ratePerKWh_Global, inter
 
                     // Add months correctly
                     month = month + monthsToAdd;
-                    year = year + Math.floor(month / 12); // floor, not round: round added a year for Jul-Dec
-                    month = ((month % 12) + 12) % 12;     // back to 0-11, also when monthsToAdd is negative
+                    year = year + Math.floor(month / 12);
+                    month = month % 12;
+                    if (month < 0) {
+                        month += 12;
+                        year -= 1;
+                    }
 
                     // Format as "MM/YYYY"
                     const nextMonth = (month + 1).toString().padStart(2, '0');
