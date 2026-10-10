@@ -10,6 +10,29 @@
 
     <link rel="icon" href="res/favicon.png" type="image/png">
 
+    <script>
+        // "Desktop site" mode (Chrome / Samsung Internet, often on for a Fold) ignores the viewport tag and lays
+        // the page out ~980px wide on a ~400px screen, which looks like a tiny tablet page. Zoom it back to the
+        // real screen's width, and pick the layout from that width (classes, not @media, which still sees 980px):
+        // .wideLayout = 2 cards side by side (600px+), .stats4Wide = 4 stats in a row. --vw = 1% of that width.
+        function fitLayout() {
+            let html = document.documentElement;
+            let landscape = window.innerWidth > window.innerHeight;
+            let screenWidth = landscape ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+            let zoom = screenWidth > 0 && window.innerWidth > screenWidth * 1.2 ? window.innerWidth / screenWidth : 1;
+
+            html.style.zoom = zoom == 1 ? "" : zoom;
+
+            let width = window.innerWidth / zoom;
+            html.style.setProperty("--vw", (width / 100) + "px");
+            html.classList.toggle("wideLayout", width >= 600);
+            html.classList.toggle("stats4Wide", (width >= 440 && width < 600) || width >= 1000);
+        }
+
+        fitLayout();
+        window.addEventListener("resize", fitLayout); // fold / unfold, rotate
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,6 +54,7 @@
             --yellow: #ffd54a;
             --cyan: #00d4ff;
             --brown: #dd714a;
+            --vw: 1vw; /* set by fitLayout */
         }
 
         * {
@@ -162,14 +186,12 @@
         }
 
         /* unfolded Fold (and tablets): accounts side by side */
-        @media (min-width: 600px) {
-            #content {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+        .wideLayout #content {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
 
-            .wide {
-                grid-column: 1 / -1;
-            }
+        .wideLayout .wide {
+            grid-column: 1 / -1;
         }
 
         .card {
@@ -204,7 +226,7 @@
         }
 
         .summaryToday .num {
-            font-size: clamp(40px, 13vw, 52px);
+            font-size: clamp(40px, calc(var(--vw) * 13), 52px);
             line-height: 1;
             color: var(--green);
         }
@@ -237,7 +259,7 @@
 
         .stat .num {
             display: block;
-            font-size: clamp(16px, 5vw, 22px);
+            font-size: clamp(16px, calc(var(--vw) * 5), 22px);
             margin-top: 2px;
             white-space: nowrap;
         }
@@ -410,15 +432,12 @@
         }
 
         /* 4 in a row only when each fits (from 600px there are 2 cards side by side) */
-        @media (min-width: 440px) and (max-width: 599px),
-        (min-width: 1000px) {
-            .stats4 {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
+        .stats4Wide .stats4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
         .stats4 .stat .num {
-            font-size: clamp(16px, 5vw, 20px);
+            font-size: clamp(16px, calc(var(--vw) * 5), 20px);
         }
 
         .avg {
@@ -464,11 +483,9 @@
             color: var(--text);
         }
 
-        @media (min-width: 600px) {
-            #accountSheet {
-                margin: auto;
-                border-radius: 18px;
-            }
+        .wideLayout #accountSheet {
+            margin: auto;
+            border-radius: 18px;
         }
 
         #accountSheet::backdrop {

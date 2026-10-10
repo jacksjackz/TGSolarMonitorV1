@@ -851,12 +851,14 @@ app.get('/index3', function (req, res) {
 
 app.get('/index4', function (req, res) {
     var path = __dirname + "/index4.html";
-    res.sendFile(path);
+    // always check for a newer copy, so phones pick up the /mobile redirect and page changes straight away
+    res.sendFile(path, { headers: { 'Cache-Control': 'no-cache' } });
 });
 
 app.get('/mobile', function (req, res) {
     var path = __dirname + "/mobile.html";
-    res.sendFile(path);
+    // always check for a newer copy, so phones pick up the /mobile redirect and page changes straight away
+    res.sendFile(path, { headers: { 'Cache-Control': 'no-cache' } });
 });
 
 app.get('/admin', function (req, res) {

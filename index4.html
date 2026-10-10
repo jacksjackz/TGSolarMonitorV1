@@ -5,11 +5,20 @@
 
     <script>
         // Phones go to the mobile version (/mobile), before anything else loads.
-        // A phone: a small screen, or a mobile browser ("Mobi" in the user agent; Android TV boxes don't have it).
+        // A phone: a mobile browser ("Mobi" in the user agent; Android TV boxes don't have it), a small page,
+        // or a small screen. The screen check is for "Desktop site" mode, which fakes a PC user agent and
+        // a 980px wide page, but screen.width is still the phone's.
         (function () {
-            let isMobileBrowser = (navigator.userAgentData && navigator.userAgentData.mobile) || /Mobi/i.test(navigator.userAgent);
-            if (isMobileBrowser || window.matchMedia("(max-width: 768px)").matches)
-                location.replace("/mobile");
+            function goToMobileIfPhone() {
+                let isMobileBrowser = (navigator.userAgentData && navigator.userAgentData.mobile) || /Mobi/i.test(navigator.userAgent);
+                if (isMobileBrowser || window.matchMedia("(max-width: 768px)").matches || screen.width <= 768)
+                    location.replace("/mobile");
+            }
+
+            goToMobileIfPhone();
+
+            // a Fold folded while this page is open
+            window.addEventListener("resize", goToMobileIfPhone);
         })();
     </script>
 
