@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#05070a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <link rel="icon" href="res/favicon.png" type="image/png">
+
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght,ROND@100..900,0..100&display=swap" rel="stylesheet">
+
+    <title>TG Solar Mobile</title>
+
+    <style>
+        :root {
+            --bg: #05070a;
+            --card: #10151c;
+            --card-2: #171e27;
+            --line: #232c38;
+            --text: #e8edf2;
+            --muted: #8a96a3;
+            --green: #3ddc84;
+            --red: #ff4d5e;
+            --yellow: #ffd54a;
+            --cyan: #00d4ff;
+            --brown: #dd714a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            padding: 0 max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+        }
+
+        .num {
+            font-family: "Doto", "Courier New", monospace;
+            font-weight: 800;
+            font-variation-settings: "ROND" 100;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* header */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: var(--bg);
+            padding: max(10px, env(safe-area-inset-top)) 0 8px;
+        }
+
+        .headRow {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .headRow img {
+            width: 28px;
+            height: 28px;
+        }
+
+        .headTitle {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .headTitle h1 {
+            margin: 0;
+            font-size: 18px;
+            letter-spacing: 0.5px;
+        }
+
+        #status {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .iconButton {
+            flex: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--text);
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        #refreshButton.loading {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* group tabs (one per location) */
+        #tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-top: 10px;
+            scrollbar-width: none;
+        }
+
+        #tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        #tabs:empty {
+            display: none;
+        }
+
+        .tab {
+            flex: none;
+            padding: 7px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--muted);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: var(--text);
+            border-color: var(--text);
+            color: var(--bg);
+            font-weight: 600;
+        }
+
+        /* cards */
+        #content {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        /* unfolded Fold (and tablets): accounts side by side */
+        @media (min-width: 600px) {
+            #content {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .wide {
+                grid-column: 1 / -1;
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 14px;
+            min-width: 0;
+        }
+
+        .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted);
+        }
+
+        .rm {
+            font-size: 0.55em;
+            color: var(--muted);
+            margin-right: 2px;
+            font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            font-weight: 600;
+        }
+
+        /* totals of the selected group */
+        .summaryToday {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin: 2px 0 12px;
+        }
+
+        .summaryToday .num {
+            font-size: clamp(40px, 13vw, 52px);
+            line-height: 1;
+            color: var(--green);
+        }
+
+        .summaryRecord {
+            margin-left: auto;
+            text-align: right;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .summaryRecord .num {
+            display: block;
+            font-size: 22px;
+            color: var(--cyan);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .stat {
+            background: var(--card-2);
+            border-radius: 10px;
+            padding: 8px;
+            min-width: 0;
+        }
+
+        .stat .num {
+            display: block;
+            font-size: clamp(16px, 5vw, 22px);
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+
+        .yesterday {
+            color: var(--brown);
+        }
+
+        .thisMonth {
+            color: #07ffb8;
+        }
+
+        .lastMonth {
+            color: var(--yellow);
+        }
+
+        /* production ratio of a 2-account group */
+        .ratioRow {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .ratioRow .num {
+            display: block;
+            font-size: 26px;
+        }
+
+        .ratioMin {
+            color: #ff8a8a;
+        }
+
+        .ratioLive {
+            color: var(--text);
+        }
+
+        .ratioMax {
+            color: #8ab4ff;
+        }
+
+        .verdict {
+            margin-top: 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--muted);
+        }
+
+        .verdict b {
+            color: var(--text);
+        }
+
+        .verdict .ok {
+            color: var(--green);
+        }
+
+        .verdict .warn {
+            color: var(--yellow);
+        }
+
+        /* account card */
+        .account {
+            border-top: 3px solid var(--accent);
+        }
+
+        .accountHead {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .accountName {
+            flex: 1;
+            min-width: 0;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--accent);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .accountLocation {
+            font-weight: 400;
+            font-size: 12px;
+            color: var(--muted);
+            margin-left: 4px;
+        }
+
+        .badge {
+            flex: none;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: var(--card-2);
+            color: var(--muted);
+        }
+
+        .badge.live::before {
+            content: "";
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            margin-right: 5px;
+            vertical-align: 1px;
+            animation: pulse 1.6s ease-in-out infinite;
+        }
+
+        .badge.stale {
+            background: #db0000;
+            color: white;
+            font-weight: 600;
+        }
+
+        @keyframes pulse {
+            50% {
+                opacity: 0.25;
+            }
+        }
+
+        .accountToday {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 10px;
+            margin: 10px 0 12px;
+        }
+
+        .accountToday .num {
+            font-size: 44px;
+            line-height: 1;
+        }
+
+        .trend {
+            font-size: 22px;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+
+        .trend.up {
+            color: var(--green);
+        }
+
+        .trend.down {
+            color: var(--red);
+        }
+
+        .trend.flat {
+            color: var(--yellow);
+        }
+
+        .accountNow {
+            margin-left: auto;
+            text-align: right;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+            white-space: nowrap;
+        }
+
+        .accountNow b {
+            color: var(--text);
+            font-size: 15px;
+        }
+
+        .stats4 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        /* 4 in a row only when each fits (from 600px there are 2 cards side by side) */
+        @media (min-width: 440px) and (max-width: 599px),
+        (min-width: 1000px) {
+            .stats4 {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        .stats4 .stat .num {
+            font-size: clamp(16px, 5vw, 20px);
+        }
+
+        .avg {
+            color: var(--cyan);
+        }
+
+        .accountFoot {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+        }
+
+        .accountFoot b {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .error {
+            color: var(--red);
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 40px 0;
+        }
+
+        /* account picker: a sheet from the bottom (a centred box when unfolded) */
+        #accountSheet {
+            margin: auto auto 0;
+            width: 100%;
+            max-width: 520px;
+            max-height: 85vh;
+            border: 0;
+            border-radius: 18px 18px 0 0;
+            padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+            background: var(--card);
+            color: var(--text);
+        }
+
+        @media (min-width: 600px) {
+            #accountSheet {
+                margin: auto;
+                border-radius: 18px;
+            }
+        }
+
+        #accountSheet::backdrop {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        #accountSheet h2 {
+            margin: 0 0 4px;
+            font-size: 18px;
+        }
+
+        .sheetNote {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .accountRow {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 4px;
+            border-bottom: 1px solid var(--line);
+            cursor: pointer;
+        }
+
+        .accountRow input {
+            flex: none;
+            width: 22px;
+            height: 22px;
+            margin: 0;
+            accent-color: var(--green);
+        }
+
+        .accountDot {
+            flex: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .accountRowName {
+            flex: 1;
+            min-width: 0;
+            font-size: 16px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sheetButtons {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .sheetButtons button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--card-2);
+            color: var(--text);
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .sheetButtons button.primary {
+            background: var(--text);
+            border-color: var(--text);
+            color: var(--bg);
+            font-weight: 600;
+        }
+
+        .sheetButtons button:disabled {
+            opacity: 0.4;
+        }
+    </style>
+
+    <script>
+        // Mobile version of index4 (no charts). Same API calls and the same calculations as index4:
+        // see index4.md §5 for how Today / Yesterday / This Month / Last Month are worked out.
+
+        const testLocalServer = false;
+        const onlineServer = true;
+
+        let url = "https://tgapps.synology.me:40556";
+
+        if (onlineServer == true) {
+            url = "";
+        }
+
+        if (testLocalServer == true) {
+            url = "http://127.0.0.1:40555";
+        }
+
+        const refreshSeconds = 120;     // same as index4 (minuteGap = 2)
+        const staleMinutes = 15;        // last scrape older than this -> red badge
+        const tariffRate = 0.37;        // index4 recalculateSavings (manual fix for accounts with no server revenue)
+        const tabStorageKey = "TGSolar_mobile_tab";
+        const hiddenStorageKey = "TGSolar_mobile_hidden"; // usernames unticked in the account picker (new accounts show by default)
+
+        const accountColors = ["#00E5FF", "#00FF00", "#FF9800", "#FF00FF", "#FFEB3B", "#D500F9", "#FF1744", "#1DE9B6", "#FFD600"];
+
+        let accounts = [];               // [{ username, color, location, description3 }] in server order
+        let accountData = new Map();     // username -> calculated values (see loadAccount)
+        let maxPVHM = new Map();         // username -> { max, time }
+        let recordCache = new Map();     // group key -> { highest, time } or "loading"
+        let ratioCache = new Map();      // "user1|user2" -> { min, max } or "loading"
+        let hiddenUsernames = new Set();
+        let selectedTab = "all";
+        let lastRefresh = null;
+        let nextRefreshAt = 0;
+        let isRefreshing = false;
+        let refreshAgain = false;        // the account picker asked for a refresh while one was running
+
+        ///////// fetch helpers (never hang: 20s timeout, errors are thrown to the caller) /////////
+
+        async function getJSON(path, options = {}) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
+            try {
+                const response = await fetch(url + path, { ...options, signal: controller.signal, cache: "no-store" });
+                if (!response.ok)
+                    throw new Error(`HTTP ${response.status} ${path}`);
+                const text = await response.text();
+                return text ? JSON.parse(text) : null;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        function postJSON(path, formData) {
+            return getJSON(path, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ formData: formData })
+            });
+        }
+
+        // a failed request gives the fallback instead of failing the whole account
+        async function safe(promise, fallback) {
+            try {
+                const value = await promise;
+                return value == null ? fallback : value;
+            } catch (err) {
+                console.log(err);
+                return fallback;
+            }
+        }
+
+        function getSolar(type, username) {
+            return getJSON("/getTGSolar/" + type + "/" + encodeURIComponent(username));
+        }
+
+        ///////// calculations (copied from index4) /////////
+
+        // indicator item by data_type: earning_map (net revenue), production_map (kWh / MWh)
+        function getIndicator(items, dataType) {
+            return Array.isArray(items) ? items.find(item => item && item.data_type === dataType) : undefined;
+        }
+
+        // null = no revenue from the server (manual fix), NaN = "-" / missing
+        function getIndicatorNumber(items, dataType) {
+            const item = getIndicator(items, dataType);
+            if (item === undefined)
+                return NaN;
+            if (item.value === null)
+                return null;
+            return parseFloat(String(item.value).replace(/,/g, ""));
+        }
+
+        function sumNetRevenue(rows) {
+            return (Array.isArray(rows) ? rows : []).reduce((sum, row) => sum + (Number(row.netRevenue) || 0), 0);
+        }
+
+        function recalculateSavings(data, rate = tariffRate) {
+            const intervalHours = 5 / 60;
+            return data.map(item => {
+                const energyKWh = (item.pv || 0) * intervalHours / 1000;
+                return { ...item, energyKWh: energyKWh, savingsRM: energyKWh * rate };
+            });
+        }
+
+        // 30 minute bins, the same bins index4 uses for its Avg RM/hr
+        function aggregateByInterval(data, binSizeMinutes) {
+            data = [...data].sort((a, b) => a.time.localeCompare(b.time));
+            if (data.length === 0) return [];
+
+            const toMinutes = str => {
+                let [h, m] = str.split(':').map(Number);
+                return h * 60 + m;
+            };
+
+            let firstMin = toMinutes(data[0].time);
+            let binEnd = Math.ceil(firstMin / binSizeMinutes) * binSizeMinutes;
+            if (firstMin % binSizeMinutes === 0)
+                binEnd += binSizeMinutes;
+
+            let results = [];
+            const lastMin = toMinutes(data[data.length - 1].time);
+            while (binEnd <= lastMin + binSizeMinutes) {
+                let binStart = binEnd - binSizeMinutes + 1;
+                let binEntries = data.filter(entry => {
+                    let min = toMinutes(entry.time);
+                    return min >= binStart && min <= binEnd;
+                });
+
+                if (binEntries.length > 0) {
+                    results.push({
+                        pv: binEntries.reduce((sum, e) => sum + (e.pv || 0), 0) / binEntries.length,
+                        savingsRM: binEntries.reduce((sum, e) => sum + e.savingsRM, 0)
+                    });
+                }
+                binEnd += binSizeMinutes;
+            }
+            return results;
+        }
+
+        // everything one account card shows
+        async function loadAccount(username) {
+            const todayDate = moment().format('DDMMYYYY');
+
+            const [todayItems, lastMonthItems, monthDetail, dailyRows, lastUpdate] = await Promise.all([
+                safe(getSolar("id_target_today", username), []),
+                safe(getSolar("id_target_last_month", username), []),
+                safe(getSolar("id_target_current_month_detail", username), []),
+                safe(getJSON("/getDailyDateStart/" + todayDate + "/" + encodeURIComponent(username)), []),
+                safe(getJSON("/getLastUpdateTime/" + encodeURIComponent(username)), null)
+            ]);
+
+            // today's 5 minute readings
+            let rows = (Array.isArray(dailyRows) ? dailyRows : [])
+                .map(row => {
+                    try { return JSON.parse(row.json); } catch (err) { return null; }
+                })
+                .filter(row => row && row.time)
+                .sort((a, b) => a.time.localeCompare(b.time));
+            rows = recalculateSavings(rows);
+
+            const cumulativeRM = rows.reduce((sum, row) => sum + row.savingsRM, 0);
+
+            // Avg RM/hr: from the bin before the first pv > 0
+            let bins = aggregateByInterval(rows, 30);
+            bins = bins.slice(Math.max(bins.findIndex(bin => bin.pv > 0) - 1, 0));
+            const avgPerHour = bins.length > 0 ? bins.reduce((sum, bin) => sum + bin.savingsRM, 0) / (bins.length * 0.5) : null;
+
+            // trend: last two raw readings
+            let trend = "flat";
+            if (rows.length >= 2) {
+                const last = rows[rows.length - 1].pv, previous = rows[rows.length - 2].pv;
+                trend = last > previous ? "up" : (last < previous ? "down" : "flat");
+            }
+            const nowW = rows.length > 0 ? rows[rows.length - 1].pv : null;
+
+            // Today: the server's value, or (manual fix) the cumulative from today's readings
+            let today = getIndicatorNumber(todayItems, "earning_map");
+            if (today === null)
+                today = rows.length > 0 ? cumulativeRM : NaN;
+
+            // This Month = this month up to yesterday + today, Yesterday = the last day of this month's detail
+            const detail = Array.isArray(monthDetail) ? monthDetail : [];
+            const thisMonth = sumNetRevenue(detail) + (isNaN(today) ? 0 : today);
+            const yesterday = detail.length > 0 ? Number(detail[detail.length - 1].netRevenue) : NaN;
+
+            // Last Month: the server's value, or (manual fix) the sum of last month's days
+            let lastMonth = getIndicatorNumber(lastMonthItems, "earning_map");
+            if (lastMonth === null)
+                lastMonth = sumNetRevenue(await safe(getSolar("id_target_last_month_detail", username), []));
+
+            // today's production in kWh (the portal gives MWh or kWh)
+            const production = getIndicator(todayItems, "production_map");
+            let productionKWh = parseFloat(production?.value);
+            if (production?.unit === "MWh")
+                productionKWh = productionKWh * 1000;
+
+            const lastUpdateTime = lastUpdate && lastUpdate.datetime_utc8 ? new Date(lastUpdate.datetime_utc8) : null;
+
+            return {
+                today: today,
+                yesterday: yesterday,
+                thisMonth: thisMonth,
+                lastMonth: lastMonth,
+                avgPerHour: avgPerHour,
+                trend: trend,
+                nowW: nowW,
+                productionKWh: isNaN(productionKWh) ? null : productionKWh,
+                lastUpdateTime: lastUpdateTime && !isNaN(lastUpdateTime) ? lastUpdateTime : null
+            };
+        }
+
+        ///////// groups: "All" + one tab per location (accounts.location) /////////
+
+        // the accounts ticked in the account picker (all of them if none are left)
+        function getShownAccounts() {
+            let shown = accounts.filter(account => !hiddenUsernames.has(account.username));
+            return shown.length > 0 ? shown : accounts;
+        }
+
+        function getGroups() {
+            let shown = getShownAccounts();
+            let groups = [{ key: "all", label: "All", accounts: shown }];
+
+            let byLocation = new Map(); // lowercase -> group
+            shown.forEach(account => {
+                if (account.location == "")
+                    return;
+                let key = "loc:" + account.location.toLowerCase();
+                if (!byLocation.has(key))
+                    byLocation.set(key, { key: key, label: account.location, accounts: [] });
+                byLocation.get(key).accounts.push(account);
+            });
+
+            // only one location covering every account -> "All" says the same thing
+            if (byLocation.size == 1 && [...byLocation.values()][0].accounts.length == shown.length)
+                return groups;
+
+            return groups.concat([...byLocation.values()]);
+        }
+
+        function getSelectedGroup() {
+            let groups = getGroups();
+            return groups.find(group => group.key == selectedTab) || groups[0];
+        }
+
+        function selectTab(key) {
+            selectedTab = key;
+            try { localStorage.setItem(tabStorageKey, key); } catch (err) { }
+            render();
+        }
+
+        ///////// once per group / pair (fetched lazily the first time a tab shows) /////////
+
+        function loadRecord(group) {
+            let key = group.accounts.map(a => a.username).join("|");
+            if (recordCache.has(key))
+                return recordCache.get(key);
+
+            recordCache.set(key, "loading");
+            postJSON("/getHighestRevenueByUsernames", { usernames: group.accounts.map(a => a.username) })
+                .then(data => recordCache.set(key, data || {}))
+                .catch(err => {
+                    console.log(err);
+                    recordCache.set(key, {});
+                })
+                .finally(render);
+            return "loading";
+        }
+
+        function loadRatio(username1, username2) {
+            let key = username1 + "|" + username2;
+            if (ratioCache.has(key))
+                return ratioCache.get(key);
+
+            ratioCache.set(key, "loading");
+            postJSON("/getHistoryRatiosByUsername", { username1: username1, username2: username2 })
+                .then(data => ratioCache.set(key, data || {}))
+                .catch(err => {
+                    console.log(err);
+                    ratioCache.set(key, {});
+                })
+                .finally(render);
+            return "loading";
+        }
+
+        ///////// formatting /////////
+
+        function escapeHTML(value) {
+            return String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+
+        // whole ringgit like index4, with thousands commas
+        function formatRM(value) {
+            if (value == null || isNaN(value))
+                return "-";
+            return Math.round(value).toLocaleString("en-US");
+        }
+
+        function rmHTML(value, className = "") {
+            return `<span class="num ${className}"><span class="rm">RM</span>${formatRM(value)}</span>`;
+        }
+
+        function shortName(username) {
+            return username.split("@")[0];
+        }
+
+        function minutesAgo(date) {
+            return date ? Math.floor((Date.now() - date.getTime()) / 60000) : null;
+        }
+
+        function formatAgo(minutes) {
+            if (minutes < 1) return "just now";
+            if (minutes < 60) return minutes + "m ago";
+            if (minutes < 60 * 24) return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m ago";
+            return Math.floor(minutes / 1440) + "d ago";
+        }
+
+        // description3: JSON key/values, or a plain string
+        function getDescriptionHTML(description3) {
+            if (!description3)
+                return "";
+            try {
+                let json = JSON.parse(description3);
+                if (json && typeof json === "object")
+                    return Object.entries(json).map(([k, v]) => `<span>${escapeHTML(k)}: <b>${escapeHTML(v)}</b></span>`).join("");
+            } catch (err) { }
+            return `<span>${escapeHTML(description3)}</span>`;
+        }
+
+        ///////// render /////////
+
+        function render() {
+            renderTabs();
+
+            let content = document.getElementById("content");
+            if (accounts.length == 0) {
+                content.innerHTML = `<div class="card wide empty">${isRefreshing ? "Loading…" : "No accounts found"}</div>`;
+                return;
+            }
+
+            let group = getSelectedGroup();
+            let html = renderSummary(group);
+
+            // a group of exactly 2 accounts gets the production ratio (username order, as index4)
+            let sorted = [...group.accounts].sort((a, b) => a.username.localeCompare(b.username));
+            if (sorted.length == 2)
+                html += renderRatio(sorted[0].username, sorted[1].username);
+
+            group.accounts.forEach(account => html += renderAccount(account));
+
+            content.innerHTML = html;
+        }
+
+        function renderTabs() {
+            let groups = getGroups();
+            let tabs = document.getElementById("tabs");
+            if (groups.length < 2) {
+                tabs.innerHTML = "";
+                return;
+            }
+
+            let current = getSelectedGroup().key;
+            tabs.innerHTML = groups.map(group =>
+                `<button class="tab ${group.key == current ? "active" : ""}" data-key="${escapeHTML(group.key)}">${escapeHTML(group.label)}</button>`
+            ).join("");
+            tabs.querySelectorAll(".tab").forEach(tab => tab.onclick = () => selectTab(tab.dataset.key));
+        }
+
+        function renderSummary(group) {
+            let total = { today: 0, yesterday: 0, thisMonth: 0, lastMonth: 0 };
+            group.accounts.forEach(account => {
+                let data = accountData.get(account.username);
+                if (!data) return;
+                Object.keys(total).forEach(key => total[key] += isNaN(data[key]) ? 0 : data[key]);
+            });
+
+            let hasData = group.accounts.some(account => accountData.has(account.username));
+            if (!hasData)
+                total = { today: NaN, yesterday: NaN, thisMonth: NaN, lastMonth: NaN };
+
+            let record = loadRecord(group);
+            let recordHTML = record == "loading" || record.highest == null
+                ? `<span class="num">-</span>`
+                : `${rmHTML(record.highest)}${escapeHTML(record.time || "")}`;
+
+            return `
+            <div class="card wide">
+                <div class="label">Today total · ${escapeHTML(group.label)}</div>
+                <div class="summaryToday">
+                    ${rmHTML(total.today)}
+                    <div class="summaryRecord">Record day${recordHTML}</div>
+                </div>
+                <div class="stats">
+                    <div class="stat"><div class="label">Yesterday</div>${rmHTML(total.yesterday, "yesterday")}</div>
+                    <div class="stat"><div class="label">This Month</div>${rmHTML(total.thisMonth, "thisMonth")}</div>
+                    <div class="stat"><div class="label">Last Month</div>${rmHTML(total.lastMonth, "lastMonth")}</div>
+                </div>
+            </div>`;
+        }
+
+        // panel washing check: both sites get the same weather, so their kWh ratio should stay in the history's Min - Max
+        function renderRatio(username1, username2) {
+            let history = loadRatio(username1, username2);
+            let data1 = accountData.get(username1), data2 = accountData.get(username2);
+
+            let live = data1 && data2 && data2.productionKWh > 0 ? data1.productionKWh / data2.productionKWh : NaN;
+            let min = history != "loading" && history.min != null ? Number(history.min) : NaN;
+            let max = history != "loading" && history.max != null ? Number(history.max) : NaN;
+
+            let name1 = escapeHTML(shortName(username1)), name2 = escapeHTML(shortName(username2));
+            let verdict = "Waiting for data";
+            if (!isNaN(live) && !isNaN(min) && !isNaN(max)) {
+                if (live < min)
+                    verdict = `<span class="warn">Below Min</span>: <b>${name1}</b> is producing less than usual, its panels may need washing`;
+                else if (live > max)
+                    verdict = `<span class="warn">Above Max</span>: <b>${name2}</b> is producing less than usual, its panels may need washing`;
+                else
+                    verdict = `<span class="ok">Within range</span>: both are producing normally`;
+            }
+
+            const fixed = value => isNaN(value) ? "-" : value.toFixed(2);
+            const kWh = data => data && data.productionKWh != null ? data.productionKWh.toFixed(1) : "-";
+
+            return `
+            <div class="card wide">
+                <div class="label">Production ratio · ${name1} ÷ ${name2}</div>
+                <div class="ratioRow">
+                    <div><div class="label">Min</div><span class="num ratioMin">${fixed(min)}</span></div>
+                    <div><div class="label">Live</div><span class="num ratioLive">${fixed(live)}</span></div>
+                    <div><div class="label">Max</div><span class="num ratioMax">${fixed(max)}</span></div>
+                </div>
+                <div class="verdict">
+                    ${verdict}<br>
+                    Today ${kWh(data1)} kWh ÷ ${kWh(data2)} kWh. Best read in the late afternoon.
+                </div>
+            </div>`;
+        }
+
+        function renderAccount(account) {
+            let data = accountData.get(account.username);
+            let name = escapeHTML(shortName(account.username));
+            let location = account.location ? `<span class="accountLocation">📍 ${escapeHTML(account.location)}</span>` : "";
+
+            if (!data) {
+                return `
+                <div class="card account" style="--accent:${account.color}">
+                    <div class="accountHead"><div class="accountName">${name}${location}</div><span class="badge">Loading…</span></div>
+                </div>`;
+            }
+
+            let ago = minutesAgo(data.lastUpdateTime);
+            let badge = ago == null
+                ? `<span class="badge">No update time</span>`
+                : (ago > staleMinutes
+                    ? `<span class="badge stale">Stale · ${formatAgo(ago)}</span>`
+                    : `<span class="badge live">Live · ${formatAgo(ago)}</span>`);
+
+            let trendIcon = { up: "⬆", down: "⬇", flat: "↔" }[data.trend];
+            let nowKW = data.nowW != null ? (data.nowW / 1000).toFixed(1) : "-";
+            let productionKWh = data.productionKWh != null ? data.productionKWh.toFixed(1) : "-";
+            let avg = data.avgPerHour != null ? data.avgPerHour.toFixed(2) : "-";
+
+            let maxPV = maxPVHM.get(account.username);
+            let maxPVHTML = maxPV ? `<span>Max PV <b>${Number(maxPV.max).toFixed(1)} kWh</b> ${escapeHTML(maxPV.time || "")}</span>` : "";
+
+            return `
+            <div class="card account" style="--accent:${account.color}">
+                <div class="accountHead">
+                    <div class="accountName">${name}${location}</div>
+                    ${badge}
+                </div>
+                <div class="accountToday">
+                    <div>
+                        <div class="label">Live Today</div>
+                        ${rmHTML(data.today)}
+                    </div>
+                    <span class="trend ${data.trend}">${trendIcon}</span>
+                    <div class="accountNow">
+                        Now <b>${nowKW}</b> kW<br>
+                        Today <b>${productionKWh}</b> kWh
+                    </div>
+                </div>
+                <div class="stats stats4">
+                    <div class="stat"><div class="label">Yesterday</div>${rmHTML(data.yesterday, "yesterday")}</div>
+                    <div class="stat"><div class="label">This Month</div>${rmHTML(data.thisMonth, "thisMonth")}</div>
+                    <div class="stat"><div class="label">Last Month</div>${rmHTML(data.lastMonth, "lastMonth")}</div>
+                    <div class="stat"><div class="label">Avg / hr</div><span class="num avg"><span class="rm">RM</span>${avg}</span></div>
+                </div>
+                <div class="accountFoot">${maxPVHTML}${getDescriptionHTML(account.description3)}</div>
+            </div>`;
+        }
+
+        function renderStatus() {
+            let status = document.getElementById("status");
+            if (isRefreshing) {
+                status.textContent = "Refreshing…";
+                return;
+            }
+            let seconds = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+            let updated = lastRefresh ? "Updated " + moment(lastRefresh).format("HH:mm") + " · " : "";
+            status.textContent = updated + "next in " + Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+        }
+
+        ///////// account picker /////////
+
+        function openAccountSheet() {
+            if (accounts.length == 0)
+                return;
+
+            let sheet = document.getElementById("accountSheet");
+            let list = document.getElementById("accountList");
+            let shown = new Set(getShownAccounts().map(account => account.username));
+
+            list.innerHTML = accounts.map(account => `
+                <label class="accountRow">
+                    <input type="checkbox" value="${escapeHTML(account.username)}" ${shown.has(account.username) ? "checked" : ""}>
+                    <span class="accountDot" style="background:${account.color}"></span>
+                    <span class="accountRowName">${escapeHTML(shortName(account.username))}</span>
+                    ${account.location ? `<span class="accountLocation">📍 ${escapeHTML(account.location)}</span>` : ""}
+                </label>`).join("");
+
+            // at least one account has to stay ticked
+            let doneButton = document.getElementById("accountDone");
+            let updateDone = () => doneButton.disabled = list.querySelectorAll("input:checked").length == 0;
+            list.querySelectorAll("input").forEach(input => input.onchange = updateDone);
+            updateDone();
+
+            sheet.showModal();
+        }
+
+        // on close (Done, a tap outside, or back): keep the ticked accounts
+        function applyAccountSheet() {
+            let inputs = [...document.querySelectorAll("#accountList input")];
+            if (inputs.length == 0 || inputs.every(input => !input.checked))
+                return;
+
+            let hidden = new Set(inputs.filter(input => !input.checked).map(input => input.value));
+            if ([...hidden].sort().join("|") == [...hiddenUsernames].sort().join("|"))
+                return;
+
+            hiddenUsernames = hidden;
+            try { localStorage.setItem(hiddenStorageKey, JSON.stringify([...hidden])); } catch (err) { }
+            render();
+
+            // accounts just ticked have no data yet
+            if (getShownAccounts().some(account => !accountData.has(account.username))) {
+                if (isRefreshing)
+                    refreshAgain = true;
+                else
+                    refresh();
+            }
+        }
+
+        ///////// refresh /////////
+
+        async function loadAccounts() {
+            let [allUsernames, usernameInfo] = await Promise.all([
+                getJSON("/getAllUsername"),
+                safe(getJSON("/getUsernameInfo"), [])
+            ]);
+
+            let infoHM = new Map((usernameInfo || []).map(info => [info.username, info]));
+            accounts = (allUsernames || []).map((user, i) => {
+                let info = infoHM.get(user.username) || {};
+                return {
+                    username: user.username,
+                    color: accountColors[i % accountColors.length],
+                    location: info.location ? String(info.location).trim() : "",
+                    description3: info.description3 || ""
+                };
+            });
+        }
+
+        async function refresh() {
+            if (isRefreshing)
+                return;
+            isRefreshing = true;
+            document.getElementById("refreshButton").classList.add("loading");
+            renderStatus();
+
+            try {
+                if (accounts.length == 0) {
+                    await loadAccounts();
+                    render();
+
+                    // best day over the last 3 months, once
+                    safe(getJSON("/getHistoryMaxPV"), []).then(rows => {
+                        rows.forEach(row => {
+                            if (row.max != null && isFinite(row.max))
+                                maxPVHM.set(row.username, { max: row.max, time: row.time });
+                        });
+                        render();
+                    });
+                }
+
+                // every shown account at once, each card fills in as its data arrives
+                await Promise.all(getShownAccounts().map(async account => {
+                    try {
+                        accountData.set(account.username, await loadAccount(account.username));
+                    } catch (err) {
+                        console.log(err);
+                    }
+                    render();
+                }));
+
+                lastRefresh = new Date();
+            } catch (err) {
+                console.log(err);
+                document.getElementById("content").innerHTML = `<div class="card wide empty">Can't reach the server<div class="error">${escapeHTML(err.message)}</div></div>`;
+            } finally {
+                isRefreshing = false;
+                nextRefreshAt = Date.now() + refreshSeconds * 1000;
+                document.getElementById("refreshButton").classList.remove("loading");
+                renderStatus();
+
+                if (refreshAgain) {
+                    refreshAgain = false;
+                    refresh();
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            try { selectedTab = localStorage.getItem(tabStorageKey) || "all"; } catch (err) { }
+            try { hiddenUsernames = new Set(JSON.parse(localStorage.getItem(hiddenStorageKey)) || []); } catch (err) { }
+
+            document.getElementById("refreshButton").onclick = refresh;
+            document.getElementById("accountButton").onclick = openAccountSheet;
+
+            let sheet = document.getElementById("accountSheet");
+            sheet.addEventListener("close", applyAccountSheet);
+            sheet.addEventListener("click", e => {
+                if (e.target == sheet) // the backdrop
+                    sheet.close();
+            });
+            document.getElementById("accountAll").onclick = function () {
+                document.querySelectorAll("#accountList input").forEach(input => input.checked = true);
+                document.getElementById("accountDone").disabled = false;
+            };
+            document.getElementById("accountDone").onclick = () => sheet.close();
+
+            render();
+            refresh();
+
+            setInterval(function () {
+                if (!isRefreshing && Date.now() >= nextRefreshAt)
+                    refresh();
+                renderStatus();
+            }, 1000);
+
+            // phones pause timers in the background: refresh straight away when the page comes back
+            document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState == "visible" && lastRefresh && Date.now() - lastRefresh.getTime() > 60000)
+                    refresh();
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <header>
+        <div class="headRow">
+            <img src="res/sunicon.png" alt="">
+            <div class="headTitle">
+                <h1>TG Solar</h1>
+                <div id="status">Loading…</div>
+            </div>
+            <button id="accountButton" class="iconButton" aria-label="Accounts">⚙</button>
+            <button id="refreshButton" class="iconButton" aria-label="Refresh">⟳</button>
+        </div>
+        <div id="tabs"></div>
+    </header>
+
+    <main id="content"></main>
+
+    <dialog id="accountSheet">
+        <h2>Accounts</h2>
+        <div class="sheetNote">Tick the accounts to show on this phone.</div>
+        <div id="accountList"></div>
+        <div class="sheetButtons">
+            <button id="accountAll">Select all</button>
+            <button id="accountDone" class="primary">Done</button>
+        </div>
+    </dialog>
+</body>
+
+</html>

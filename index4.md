@@ -1,6 +1,6 @@
 # index4.html — Multi-Account Revenue Dashboard
 
-Served at **`/index4`** (`app.js` route → `index4.html`). A full-screen, dark-themed wall dashboard showing live and historical **net revenue (MYR)** for one or more solar accounts, with Chart.js graphs and an account-ratio footer. Accounts are grouped into **pages** (slides) that rotate automatically, each for its own time (default 20s, see §8). An account can be on more than one page, e.g. account 1 + 2 together, then each on its own page. Built for a large desktop or TV screen. At 768px or narrower everything is hidden and a "use a PC" message is shown.
+Served at **`/index4`** (`app.js` route → `index4.html`). A full-screen, dark-themed wall dashboard showing live and historical **net revenue (MYR)** for one or more solar accounts, with Chart.js graphs and an account-ratio footer. Accounts are grouped into **pages** (slides) that rotate automatically, each for its own time (default 20s, see §8). An account can be on more than one page, e.g. account 1 + 2 together, then each on its own page. Built for a large desktop or TV screen. Phones are sent to **`/mobile`** (`mobile.html`, no charts) by a small script at the top of `<head>`: a mobile browser (`navigator.userAgentData.mobile`, or `Mobi` in the user agent) or a screen 768px or narrower.
 
 The whole page is one file: CSS in `<style>`, all logic in one inline `<script>` in `<head>`. The `<body>` only holds a few static elements. Everything else is built in JS.
 
@@ -70,7 +70,6 @@ body
 ├── #topLeft                 "Refresh In Ns" countdown (absolute, top-left)
 ├── .backgroundLogo          faded res/logo.png
 ├── #progressDialog          loading spinner modal
-├── #mobileDiv               shown only ≤768px
 ├── #slider  (overflow hidden)
 │   └── #sliderTrack  (flex row, slides with transform: translateX(-N × 100%))
 │       └── .page#page_<i>   one per page, 100% wide, clips its own overflow

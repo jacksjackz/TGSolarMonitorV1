@@ -121,11 +121,27 @@ var pool = new Pool(postgres_credentials);
     let table2 = "CREATE TABLE IF NOT EXISTS datacurrentmonth ( vindex BIGSERIAL PRIMARY KEY, monthyear TEXT UNIQUE, json text);";
     await pool.query(table2);
 
-    let table3 = "CREATE TABLE IF NOT EXISTS datadaily ( vindex BIGSERIAL PRIMARY KEY, dateonly TEXT, datetime timestamp without time zone , json text);";
+    let table3 = "CREATE TABLE IF NOT EXISTS datadaily ( vindex BIGSERIAL PRIMARY KEY, dateonly TEXT, datetime timestamp without time zone , json text, username text);";
     await pool.query(table3);
+
+    // older databases were created without username
+    let table3_columns = "ALTER TABLE datadaily ADD COLUMN IF NOT EXISTS username text;";
+    await pool.query(table3_columns);
 
     let table3_index = "CREATE INDEX IF NOT EXISTS idx_datadaily_dateonly_datetime ON datadaily(dateonly, datetime);";
     await pool.query(table3_index);
+
+    // one reading per account per time slot, so ON CONFLICT DO NOTHING in /postDailyDate skips duplicates
+    // remove existing duplicates first (keep the earliest row), otherwise the unique index cannot be created
+    try {
+        let table3_dedupe = "DELETE FROM datadaily a USING datadaily b WHERE a.username = b.username AND a.datetime = b.datetime AND a.vindex > b.vindex;";
+        await pool.query(table3_dedupe);
+
+        let table3_unique = "CREATE UNIQUE INDEX IF NOT EXISTS uq_datadaily_username_datetime ON datadaily(username, datetime);";
+        await pool.query(table3_unique);
+    } catch (err) {
+        console.error("datadaily unique index error:", err.message);
+    }
 
     let table4 = "CREATE TABLE IF NOT EXISTS accounts  ( vindex BIGSERIAL PRIMARY KEY, username TEXT, description text);";
     await pool.query(table4);
@@ -835,6 +851,11 @@ app.get('/index3', function (req, res) {
 
 app.get('/index4', function (req, res) {
     var path = __dirname + "/index4.html";
+    res.sendFile(path);
+});
+
+app.get('/mobile', function (req, res) {
+    var path = __dirname + "/mobile.html";
     res.sendFile(path);
 });
 
